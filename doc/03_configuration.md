@@ -217,8 +217,7 @@ Print the output as a sequence of dots and other symbols.
 - `E` Error
 
 Failures with complete output and error information, as well as a general
-summary are printed at the end (or when `Ctrl-C` is pressed). This is a great
-reporter for when you want it concise but still information-rich.
+summary are printed at the end (or when `Ctrl-C` is pressed).
 
 This is a great all-around reporter. It's concise, but still rich in information.
 
