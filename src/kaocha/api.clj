@@ -103,8 +103,8 @@
                 (when-not (some #(or (hierarchy/leaf? %)
                                      (::testable/load-error %))
                                 (testable/test-seq test-plan))
-                  (output/warn (format "Testable seq %s" (testable/test-seq test-plan)))
                   (output/warn (format "Test plan: %s" test-plan))
+                  (output/warn (format "Testable seq %s" (vec (testable/test-seq test-plan))))
                   (if (not (zero? (count (filter ::testable/skip (testable/test-seq-with-skipped test-plan)))))
                     (output/warn (format (str "All %d tests were skipped."
                                               " Check for misspelled settings in your Kaocha test configuration"
