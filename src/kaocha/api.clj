@@ -103,6 +103,7 @@
                 (let [with-skipped (testable/test-seq-with-skipped test-plan)]
                   (when-not (some #(or (and (not (::testable/skip %))
                                             (hierarchy/leaf? %))
+                                       ;; 
                                        (::testable/load-error %))
                                   with-skipped)
                     (if (some ::testable/skip with-skipped)
