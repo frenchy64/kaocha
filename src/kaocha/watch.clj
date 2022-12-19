@@ -243,8 +243,7 @@ errors as test errors."
                       (fn [suites]
                         ;; We don't really know which suite the load error
                         ;; belongs to, it could well be in a file shared by all
-                        ;; suites, so we arbitrarily put the load error on all
-                        ;; suites.
+                        ;; suites, so we put the load error on all suites.
                         (mapv #(assoc %
                                       ::testable/load-error error
                                       ::testable/load-error-file (or file (util/ns-file error-ns))

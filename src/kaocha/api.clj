@@ -86,39 +86,31 @@
 (defn run [config]
   (let [plugins      (:kaocha/plugins config)
         plugin-chain (plugin/load-all plugins)]
-    (output/warn `run 1)
     (plugin/with-plugins plugin-chain
       (let [config     (plugin/run-hook :kaocha.hooks/config config)
             color?     (:kaocha/color? config)
             fail-fast? (:kaocha/fail-fast? config)
             history    (atom [])]
-        (output/warn `run 2)
         (binding [*active?*               true
                   testable/*fail-fast?*   fail-fast?
                   testable/*config*       config
                   history/*history*       history
                   output/*colored-output* color?]
-          (output/warn `run 3)
           (with-bindings (config/binding-map config)
             (let [config (resolve-reporter config)]
               (let [test-plan (test-plan config)]
-                (output/warn `run 4)
                 
                 (when-not (some #(or (hierarchy/leaf? %)
                                      (::testable/load-error %))
                                 (testable/test-seq test-plan))
-                  (output/warn (format "Test plan: %s" test-plan))
-                  (output/warn (format "Testable seq %s" (vec (testable/test-seq test-plan))))
-                  (if-some [skipped (seq (filter ::testable/skip (testable/test-seq-with-skipped test-plan)))]
+                  (if (not (zero? (count (filter ::testable/skip (testable/test-seq-with-skipped test-plan)))))
                     (output/warn (format (str "All %d tests were skipped."
                                               " Check for misspelled settings in your Kaocha test configuration"
                                               " or incorrect focus or skip filters.")
-                                         (count skipped)))
+                                         (count (testable/test-seq-with-skipped test-plan))))
                     (output/warn (str "No tests were found. This may be an issue in your Kaocha test configuration."
                                       " To investigate, check the :test-paths and :ns-patterns keys in tests.edn.")))
-                  (output/warn `run 7)
                   (throw+ {:kaocha/early-exit 0 }))
-                (output/warn `run 8)
                 
                 (when (find-ns 'matcher-combinators.core)
                   (require 'kaocha.matcher-combinators))
@@ -150,9 +142,7 @@
                                                                            (System/exit 1)))
                                             (fn [])
                                             on-exit)
-                        (output/warn `run 9)
                         (let [test-plan (plugin/run-hook :kaocha.hooks/pre-run test-plan)]
-                          (output/warn `run 10)
                           (binding [testable/*test-plan* test-plan]
                             (let [test-plan-tests (:kaocha.test-plan/tests test-plan)
                                   result-tests    (testable/run-testables test-plan-tests test-plan)
@@ -161,10 +151,8 @@
                                                                        (dissoc :kaocha.test-plan/tests)
                                                                        (assoc :kaocha.result/tests result-tests)))]
                               (assert (= (count test-plan-tests) (count (:kaocha.result/tests result))))
-                              (output/warn `run 11)
                               (-> result
                                   result/testable-totals
                                   result/totals->clojure-test-summary
                                   t/do-report)
-                              (output/warn `run 12 result)
                               result)))))))))))))))
