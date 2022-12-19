@@ -86,6 +86,7 @@
 (defn run [config]
   (let [plugins      (:kaocha/plugins config)
         plugin-chain (plugin/load-all plugins)]
+    (prn `run)
     (plugin/with-plugins plugin-chain
       (let [config     (plugin/run-hook :kaocha.hooks/config config)
             color?     (:kaocha/color? config)
