@@ -152,6 +152,7 @@
                                             on-exit)
                         (output/warn `run 9)
                         (let [test-plan (plugin/run-hook :kaocha.hooks/pre-run test-plan)]
+                          (output/warn `run 10)
                           (binding [testable/*test-plan* test-plan]
                             (let [test-plan-tests (:kaocha.test-plan/tests test-plan)
                                   result-tests    (testable/run-testables test-plan-tests test-plan)
@@ -160,8 +161,10 @@
                                                                        (dissoc :kaocha.test-plan/tests)
                                                                        (assoc :kaocha.result/tests result-tests)))]
                               (assert (= (count test-plan-tests) (count (:kaocha.result/tests result))))
+                              (output/warn `run 11)
                               (-> result
                                   result/testable-totals
                                   result/totals->clojure-test-summary
                                   t/do-report)
+                              (output/warn `run 12 result)
                               result)))))))))))))))
