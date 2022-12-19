@@ -100,20 +100,17 @@
             (let [config (resolve-reporter config)]
               (let [test-plan (test-plan config)]
                 
-                (let [with-skipped (testable/test-seq-with-skipped test-plan)]
-                  (when-not (some #(or (and (not (::testable/skip %))
-                                            (hierarchy/leaf? %))
-                                       ;; 
-                                       (::testable/load-error %))
-                                  with-skipped)
-                    (if (some ::testable/skip with-skipped)
-                      (output/warn (format (str "All %d tests were skipped."
-                                                " Check for misspelled settings in your Kaocha test configuration"
-                                                " or incorrect focus or skip filters.")
-                                           (count with-skipped)))
-                      (output/warn (str "No tests were found. This may be an issue in your Kaocha test configuration."
-                                        " To investigate, check the :test-paths and :ns-patterns keys in tests.edn.")))
-                    (throw+ {:kaocha/early-exit 0})))
+                (when-not (some #(or (hierarchy/leaf? %)
+                                     (::testable/load-error %))
+                                (testable/test-seq test-plan))
+                  (if (not (zero? (count (filter ::testable/skip (testable/test-seq-with-skipped test-plan)))))
+                    (output/warn (format (str "All %d tests were skipped."
+                                              " Check for misspelled settings in your Kaocha test configuration"
+                                              " or incorrect focus or skip filters.")
+                                         (count (testable/test-seq-with-skipped test-plan))))
+                    (output/warn (str "No tests were found. This may be an issue in your Kaocha test configuration."
+                                      " To investigate, check the :test-paths and :ns-patterns keys in tests.edn.")))
+                  (throw+ {:kaocha/early-exit 0 }))
                 
                 (when (find-ns 'matcher-combinators.core)
                   (require 'kaocha.matcher-combinators))
