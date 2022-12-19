@@ -105,11 +105,11 @@
                                 (testable/test-seq test-plan))
                   (output/warn (format "Test plan: %s" test-plan))
                   (output/warn (format "Testable seq %s" (vec (testable/test-seq test-plan))))
-                  (if (not (zero? (count (filter ::testable/skip (testable/test-seq-with-skipped test-plan)))))
+                  (if-some [skipped (seq (filter ::testable/skip (testable/test-seq-with-skipped test-plan)))]
                     (output/warn (format (str "All %d tests were skipped."
                                               " Check for misspelled settings in your Kaocha test configuration"
                                               " or incorrect focus or skip filters.")
-                                         (count (testable/test-seq-with-skipped test-plan))))
+                                         (count skipped)))
                     (output/warn (str "No tests were found. This may be an issue in your Kaocha test configuration."
                                       " To investigate, check the :test-paths and :ns-patterns keys in tests.edn.")))
                   (throw+ {:kaocha/early-exit 0 }))

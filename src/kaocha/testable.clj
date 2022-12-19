@@ -237,13 +237,14 @@
     (cons testable)))
 
 (defn test-seq-with-skipped 
+  "Create a seq of all tests, including any skipped tests.
+
+  Typically you want to look at `test-seq` instead." 
   [testable]
- "Create a seq of all tests, including any skipped tests.
- 
- Typically you want to look at `test-seq` instead." 
-  (cond->> (mapcat test-seq (or (:kaocha/tests testable)
-                                               (:kaocha.test-plan/tests testable)
-                                               (:kaocha.result/tests testable)))
+  (cond->> (mapcat test-seq-with-skipped
+                   (or (:kaocha/tests testable)
+                       (:kaocha.test-plan/tests testable)
+                       (:kaocha.result/tests testable)))
     ;; When calling test-seq on the top level test-plan/result, don't include
     ;; the outer map. When running on an actual testable, do include it.
     (:kaocha.testable/id testable)
