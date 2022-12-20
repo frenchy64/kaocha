@@ -95,7 +95,8 @@
 
 (defn drain-and-rescan! [q tracker watch-paths]
   (drain-queue! q)
-  (try (ctn-dir/scan-dirs tracker watch-paths)
+  (try (let [res (ctn-dir/scan-dirs tracker watch-paths)]
+         (prn `drain-queue! "GOOD"))
        (catch clojure.lang.ExceptionInfo e
          (if (circular-dependency? e)
            (do (prn `drain-and-rescan! "CYCLE DETECTED")
