@@ -57,7 +57,8 @@
                                   (assoc suite
                                          ::testable/load-error error
                                          ::testable/load-error-message "Failed to configure namespace tracker:"))
-                              (assoc suite ::testable/skip true))))))))
+                              (assoc suite ::testable/skip true)))
+                          suites)))))
     (let [config (if (seq focus)
                    (assoc config :kaocha.filter/focus focus)
                    config)
