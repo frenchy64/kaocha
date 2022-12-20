@@ -42,7 +42,7 @@
 (defn drain-queue! [q]
   (doall (take-while identity (repeatedly #(qpoll q)))))
 
-(defn apply-to-first-unskipped-suite [config f others]
+(defn apply-to-first-unskipped-suite [config f]
   (let [applied? (volatile! false)]
     (update config :kaocha/tests
             (fn [suites]
