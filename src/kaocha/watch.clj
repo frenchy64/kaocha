@@ -96,7 +96,7 @@
     (when (seq focus)
       (println "[watch] Re-running failed tests" (set focus)))))
 
-(defn- circular-dependency? []
+(defn- circular-dependency? [e]
   (= :lambdaisland.tools.namespace.dependency/circular-dependency
      (:reason (ex-data e))))
 
