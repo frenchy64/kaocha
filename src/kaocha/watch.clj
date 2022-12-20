@@ -186,41 +186,46 @@
       [config plugin-chain])
     [config plugin-chain]))
 
+(defn init-tracker [])
+
 (defn run-loop [finish? config tracker q watch-paths]
-  (loop [tracker      tracker
-         config       config
-         plugin-chain plugin/*current-chain*
-         focus        nil]
-    (when-not @finish?
-      (let [result  (try-run config focus tracker)
-            tracker (::tracker result)
-            error?  (::error? result)
-            ignore  (if (::use-ignore-file config)
-                      (into (::ignore config)
-                            (merge-ignore-files "."))
-                      (::ignore config))]
-        (cond
-          error?
-          (do
-            (println "[watch] Error reloading, all tests skipped.")
-            (let [[tracker _] (wait-and-rescan! q tracker watch-paths ignore)
-                  [config plugin-chain] (reload-config config plugin-chain)]
-              (recur tracker config plugin-chain nil)))
+  (let [tracker (if tracker
+                  )]
+    (loop [tracker      tracker
+           config       config
+           plugin-chain plugin/*current-chain*
+           focus        nil]
+      (when-not @finish?
+        (let [tracker 
+              result  (try-run config focus tracker)
+              tracker (::tracker result)
+              error?  (::error? result)
+              ignore  (if (::use-ignore-file config)
+                        (into (::ignore config)
+                              (merge-ignore-files "."))
+                        (::ignore config))]
+          (cond
+            error?
+            (do
+              (println "[watch] Error reloading, all tests skipped.")
+              (let [[tracker _] (wait-and-rescan! q tracker watch-paths ignore)
+                    [config plugin-chain] (reload-config config plugin-chain)]
+                (recur tracker config plugin-chain nil)))
 
-          (and (seq focus) (not (result/failed? result)))
-          (do
-            (println "[watch] Failed tests pass, re-running all tests.")
-            (recur (drain-and-rescan! q tracker watch-paths) config plugin-chain nil))
+            (and (seq focus) (not (result/failed? result)))
+            (do
+              (println "[watch] Failed tests pass, re-running all tests.")
+              (recur (drain-and-rescan! q tracker watch-paths) config plugin-chain nil))
 
-          :else
-          (let [[tracker trigger] (wait-and-rescan! q tracker watch-paths ignore)
-                [config plugin-chain] (reload-config config plugin-chain)
-                focus (when-not (= :enter trigger)
-                        (->> result
-                             testable/test-seq
-                             (filter result/failed-one?)
-                             (map ::testable/id)))]
-            (recur tracker config plugin-chain focus)))))))
+            :else
+            (let [[tracker trigger] (wait-and-rescan! q tracker watch-paths ignore)
+                  [config plugin-chain] (reload-config config plugin-chain)
+                  focus (when-not (= :enter trigger)
+                          (->> result
+                               testable/test-seq
+                               (filter result/failed-one?)
+                               (map ::testable/id)))]
+              (recur tracker config plugin-chain focus))))))))
 
 (defplugin kaocha.watch/plugin
   "This is an internal plugin, don't use it directly.
@@ -290,10 +295,17 @@ errors as test errors."
                       (set/union (watch-paths config)
                                  (set (map #(.getParentFile (.getCanonicalFile %)) (find-ignore-files "."))))
                       (watch-paths config))
-        tracker     (-> (ctn-track/tracker)
-                        (ctn-dir/scan-dirs watch-paths)
-                        (dissoc :lambdaisland.tools.namespace.track/unload
-                                :lambdaisland.tools.namespace.track/load))]
+        tracker (ctn-track/tracker)
+        tracker (try (-> tracker
+                         (ctn-dir/scan-dirs watch-paths)
+                         (dissoc :lambdaisland.tools.namespace.track/unload
+                                 :lambdaisland.tools.namespace.track/load))
+                     (catch ExceptionInfo e
+                       (if (= :lambdaisland.tools.namespace.dependency/circular-dependency
+                              (:reason (ex-data e)))
+                         (do (println e)
+                             (assoc tracker ::error? true))
+                         (throw e))))]
 
     (when (or (= watcher-type :hawk) (::hawk-opts config))
       (output/warn "Hawk watcher is deprecated in favour of Beholder. Kaocha will soon get rid of Hawk completely."))
