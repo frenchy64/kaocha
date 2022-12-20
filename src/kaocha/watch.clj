@@ -186,46 +186,41 @@
       [config plugin-chain])
     [config plugin-chain]))
 
-(defn init-tracker [])
-
 (defn run-loop [finish? config tracker q watch-paths]
-  (let [tracker (if tracker
-                  )]
-    (loop [tracker      tracker
-           config       config
-           plugin-chain plugin/*current-chain*
-           focus        nil]
-      (when-not @finish?
-        (let [tracker 
-              result  (try-run config focus tracker)
-              tracker (::tracker result)
-              error?  (::error? result)
-              ignore  (if (::use-ignore-file config)
-                        (into (::ignore config)
-                              (merge-ignore-files "."))
-                        (::ignore config))]
-          (cond
-            error?
-            (do
-              (println "[watch] Error reloading, all tests skipped.")
-              (let [[tracker _] (wait-and-rescan! q tracker watch-paths ignore)
-                    [config plugin-chain] (reload-config config plugin-chain)]
-                (recur tracker config plugin-chain nil)))
+  (loop [tracker      tracker
+         config       config
+         plugin-chain plugin/*current-chain*
+         focus        nil]
+    (when-not @finish?
+      (let [result  (try-run config focus tracker)
+            tracker (::tracker result)
+            error?  (::error? result)
+            ignore  (if (::use-ignore-file config)
+                      (into (::ignore config)
+                            (merge-ignore-files "."))
+                      (::ignore config))]
+        (cond
+          error?
+          (do
+            (println "[watch] Error reloading, all tests skipped.")
+            (let [[tracker _] (wait-and-rescan! q tracker watch-paths ignore)
+                  [config plugin-chain] (reload-config config plugin-chain)]
+              (recur tracker config plugin-chain nil)))
 
-            (and (seq focus) (not (result/failed? result)))
-            (do
-              (println "[watch] Failed tests pass, re-running all tests.")
-              (recur (drain-and-rescan! q tracker watch-paths) config plugin-chain nil))
+          (and (seq focus) (not (result/failed? result)))
+          (do
+            (println "[watch] Failed tests pass, re-running all tests.")
+            (recur (drain-and-rescan! q tracker watch-paths) config plugin-chain nil))
 
-            :else
-            (let [[tracker trigger] (wait-and-rescan! q tracker watch-paths ignore)
-                  [config plugin-chain] (reload-config config plugin-chain)
-                  focus (when-not (= :enter trigger)
-                          (->> result
-                               testable/test-seq
-                               (filter result/failed-one?)
-                               (map ::testable/id)))]
-              (recur tracker config plugin-chain focus))))))))
+          :else
+          (let [[tracker trigger] (wait-and-rescan! q tracker watch-paths ignore)
+                [config plugin-chain] (reload-config config plugin-chain)
+                focus (when-not (= :enter trigger)
+                        (->> result
+                             testable/test-seq
+                             (filter result/failed-one?)
+                             (map ::testable/id)))]
+            (recur tracker config plugin-chain focus)))))))
 
 (defplugin kaocha.watch/plugin
   "This is an internal plugin, don't use it directly.
