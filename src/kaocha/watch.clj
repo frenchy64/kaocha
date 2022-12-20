@@ -54,17 +54,8 @@
                         (assoc suite ::testable/skip true)))
                     suites)))))
 
-(defn- try-run [config focus tracker]
-  (let [config (if-some [error (::tracker-error tracker)]
-                 (-> config
-                     (assoc ::error? true
-                            ::tracker (dissoc tracker ::tracker-error))
-                     (apply-to-first-unskipped-suite
-                       #(assoc %
-                               ::testable/load-error error
-                               ::testable/load-error-message "Failed to configure namespace tracker:")))
-                 config)
-        config (if (seq focus)
+(defn- try-run [config focus {::keys [tracker-error] :as tracker}]
+  (let [config (if (seq focus)
                  (assoc config :kaocha.filter/focus focus)
                  config)
         config (-> config
@@ -78,8 +69,11 @@
     (println)
     result))
 
-(defn track-reload! [tracker]
-  (ctn-reload/track-reload (assoc tracker ::ctn-file/load-error {})))
+(defn track-reload! [{::keys [tracker-error] :as tracker}]
+  (-> tracker
+      (assoc ::ctn-file/load-error {})
+      (cond-> (not tracker-error) ctn-reload/track-reload)
+      (dissoc ::tracker-error)))
 
 (defn print-scheduled-operations! [tracker focus]
   (let [unload (set (::ctn-track/unload tracker))
@@ -261,9 +255,11 @@ errors as test errors."
     (print-scheduled-operations! tracker focus)
     (let [tracker    (track-reload! tracker)
           config     (assoc config ::tracker tracker)
-          error      (::ctn-reload/error tracker)
-          error-ns   (::ctn-reload/error-ns tracker)
-          load-error (::ctn-file/load-error tracker)]
+          error      (or (::tracker-error tracker)
+                         (::ctn-reload/error tracker))
+          error-ns   (if (circular-dependency? error)
+                       (:node (ex-data error))
+                       (::ctn-reload/error-ns tracker))]
       (if (and error error-ns)
         (let [[file line] (util/compiler-exception-file-and-line error)]
           (-> config
@@ -282,7 +278,7 @@ errors as test errors."
                                       ::testable/load-error-message (str "Failed reloading " error-ns ":"))]
                               (map #(assoc % ::testable/skip true))
                               (rest suites))))))
-                config))))
+        config))))
 
 (defn watch-paths [config]
   (into #{}
