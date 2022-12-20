@@ -96,9 +96,17 @@
     (when (seq focus)
       (println "[watch] Re-running failed tests" (set focus)))))
 
+(defn- circular-dependency? []
+  (= :lambdaisland.tools.namespace.dependency/circular-dependency
+     (:reason (ex-data e))))
+
 (defn drain-and-rescan! [q tracker watch-paths]
   (drain-queue! q)
-  (ctn-dir/scan-dirs tracker watch-paths))
+  (try (ctn-dir/scan-dirs tracker watch-paths)
+       (catch clojure.lang.ExceptionInfo e
+         (if (circular-dependency? e)
+           (assoc tracker ::tracker-error e)
+           (throw e)))))
 
 (defn glob?
   "Does path match any of the glob patterns.
@@ -320,8 +328,7 @@ errors as test errors."
                          (dissoc :lambdaisland.tools.namespace.track/unload
                                  :lambdaisland.tools.namespace.track/load))
                      (catch clojure.lang.ExceptionInfo e
-                       (if (= :lambdaisland.tools.namespace.dependency/circular-dependency
-                              (:reason (ex-data e)))
+                       (if (circular-dependency? e)
                          (assoc tracker ::tracker-error e)
                          (throw e))))]
 
