@@ -55,27 +55,28 @@
                     suites)))))
 
 (defn- try-run [config focus tracker]
-  (if-some [error (::tracker-error tracker)]
-    (-> config
-        (assoc ::error? true
-               ::tracker (dissoc tracker ::tracker-error))
-        (apply-to-first-unskipped-suite
-          #(assoc %
-                  ::testable/load-error error
-                  ::testable/load-error-message "Failed to configure namespace tracker:")))
-    (let [config (if (seq focus)
-                   (assoc config :kaocha.filter/focus focus)
-                   config)
-          config (-> config
-                     (assoc ::focus focus)
-                     (assoc ::tracker tracker)
-                     (update :kaocha/plugins #(cons ::plugin %)))
-          result (try
-                   (api/run config)
-                   (catch Throwable t
-                     (println "[watch] Fatal error in test run" t)))]
-      (println)
-      result)))
+  (let [config (if-some [error (::tracker-error tracker)]
+                 (-> config
+                     (assoc ::error? true
+                            ::tracker (dissoc tracker ::tracker-error))
+                     (apply-to-first-unskipped-suite
+                       #(assoc %
+                               ::testable/load-error error
+                               ::testable/load-error-message "Failed to configure namespace tracker:")))
+                 config)
+        config (if (seq focus)
+                 (assoc config :kaocha.filter/focus focus)
+                 config)
+        config (-> config
+                   (assoc ::focus focus)
+                   (assoc ::tracker tracker)
+                   (update :kaocha/plugins #(cons ::plugin %)))
+        result (try
+                 (api/run config)
+                 (catch Throwable t
+                   (println "[watch] Fatal error in test run" t)))]
+    (println)
+    result))
 
 (defn track-reload! [tracker]
   (ctn-reload/track-reload (assoc tracker ::ctn-file/load-error {})))
