@@ -298,8 +298,7 @@ errors as test errors."
                      (catch clojure.lang.ExceptionInfo e
                        (if (= :lambdaisland.tools.namespace.dependency/circular-dependency
                               (:reason (ex-data e)))
-                         (do (println e)
-                             (assoc tracker ::error? true))
+                         (assoc tracker ::error? true)
                          (throw e))))]
 
     (when (or (= watcher-type :hawk) (::hawk-opts config))
