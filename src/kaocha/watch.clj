@@ -70,10 +70,8 @@
     result))
 
 (defn track-reload! [{::keys [tracker-error] :as tracker}]
-  (-> tracker
-      (assoc ::ctn-file/load-error {})
-      (cond-> (not tracker-error) ctn-reload/track-reload)
-      (dissoc ::tracker-error)))
+  (cond-> (assoc tracker ::ctn-file/load-error {})
+    (not tracker-error) ctn-reload/track-reload))
 
 (defn print-scheduled-operations! [tracker focus]
   (let [unload (set (::ctn-track/unload tracker))
@@ -99,7 +97,8 @@
   (try (ctn-dir/scan-dirs tracker watch-paths)
        (catch clojure.lang.ExceptionInfo e
          (if (circular-dependency? e)
-           (assoc tracker ::tracker-error e)
+           (do (prn `drain-and-rescan! "CYCLE DETECTED")
+               (assoc tracker ::tracker-error e))
            (throw e)))))
 
 (defn glob?
@@ -216,7 +215,7 @@
          focus        nil]
     (when-not @finish?
       (let [result  (try-run config focus tracker)
-            tracker (::tracker result)
+            tracker (dissoc (::tracker result) ::tracker-error)
             error?  (::error? result)
             ignore  (if (::use-ignore-file config)
                       (into (::ignore config)
@@ -325,7 +324,8 @@ errors as test errors."
                                  :lambdaisland.tools.namespace.track/load))
                      (catch clojure.lang.ExceptionInfo e
                        (if (circular-dependency? e)
-                         (assoc tracker ::tracker-error e)
+                         (do (prn `run* "CYCLE DETECTED")
+                             (assoc tracker ::tracker-error e))
                          (throw e))))]
 
     (when (or (= watcher-type :hawk) (::hawk-opts config))
