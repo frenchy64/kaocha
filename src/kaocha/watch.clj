@@ -70,6 +70,7 @@
     result))
 
 (defn track-reload! [{::keys [tracker-error] :as tracker}]
+  (prn `track-reload! (if tracker-error "ERROR!" "GOOD"))
   (cond-> (assoc tracker ::ctn-file/load-error {})
     (not tracker-error) ctn-reload/track-reload))
 
