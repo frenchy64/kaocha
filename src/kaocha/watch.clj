@@ -42,23 +42,27 @@
 (defn drain-queue! [q]
   (doall (take-while identity (repeatedly #(qpoll q)))))
 
+(defn apply-to-first-unskipped-suite [config f others]
+  (let [applied? (volatile! false)]
+    (update config :kaocha/tests
+            (fn [suites]
+              (mapv (fn [suite]
+                      (if (and (not @applied?)
+                               (not (::testable/skip true)))
+                        (do (vreset! applied? true)
+                            (f suite))
+                        (assoc suite ::testable/skip true)))
+                    suites)))))
+
 (defn- try-run [config focus tracker]
   (if-some [error (::tracker-error tracker)]
     (-> config
         (assoc ::error? true
                ::tracker (dissoc tracker ::tracker-error))
-        (update :kaocha/tests
-                (fn [suites]
-                  (let [applied? (volatile! false)]
-                    (mapv (fn [suite]
-                            (if (and (not @applied?)
-                                     (not (::testable/skip true)))
-                              (do (vreset! applied? true)
-                                  (assoc suite
-                                         ::testable/load-error error
-                                         ::testable/load-error-message "Failed to configure namespace tracker:"))
-                              (assoc suite ::testable/skip true)))
-                          suites)))))
+        (apply-to-first-unskipped-suite
+          #(assoc %
+                  ::testable/load-error error
+                  ::testable/load-error-message "Failed to configure namespace tracker:")))
     (let [config (if (seq focus)
                    (assoc config :kaocha.filter/focus focus)
                    config)
