@@ -43,19 +43,34 @@
   (doall (take-while identity (repeatedly #(qpoll q)))))
 
 (defn- try-run [config focus tracker]
-  (let [config (if (seq focus)
-                 (assoc config :kaocha.filter/focus focus)
-                 config)
-        config (-> config
-                   (assoc ::focus focus)
-                   (assoc ::tracker tracker)
-                   (update :kaocha/plugins #(cons ::plugin %)))
-        result (try
-                 (api/run config)
-                 (catch Throwable t
-                   (println "[watch] Fatal error in test run" t)))]
-    (println)
-    result))
+  (if-some [error (::tracker-error tracker)]
+    (-> config
+        (assoc ::error? true
+               ::tracker (dissoc tracker ::tracker-error))
+        (update :kaocha/tests
+                (fn [suites]
+                  (let [applied? (volatile! false)]
+                    (mapv (fn [suite]
+                            (if (and (not @applied?)
+                                     (not (::testable/skip true)))
+                              (do (vreset! applied? true)
+                                  (assoc suite
+                                         ::testable/load-error error
+                                         ::testable/load-error-message "Failed to configure namespace tracker:"))
+                              (assoc suite ::testable/skip true))))))))
+    (let [config (if (seq focus)
+                   (assoc config :kaocha.filter/focus focus)
+                   config)
+          config (-> config
+                     (assoc ::focus focus)
+                     (assoc ::tracker tracker)
+                     (update :kaocha/plugins #(cons ::plugin %)))
+          result (try
+                   (api/run config)
+                   (catch Throwable t
+                     (println "[watch] Fatal error in test run" t)))]
+      (println)
+      result)))
 
 (defn track-reload! [tracker]
   (ctn-reload/track-reload (assoc tracker ::ctn-file/load-error {})))
@@ -290,6 +305,9 @@ errors as test errors."
                       (set/union (watch-paths config)
                                  (set (map #(.getParentFile (.getCanonicalFile %)) (find-ignore-files "."))))
                       (watch-paths config))
+        ;; scenarios:
+        ;; 1. tracker immediately fails with circular dependency before running tests
+        ;; 2. tracker fails with circular dependency between test runs
         tracker (ctn-track/tracker)
         tracker (try (-> tracker
                          (ctn-dir/scan-dirs watch-paths)
@@ -298,7 +316,7 @@ errors as test errors."
                      (catch clojure.lang.ExceptionInfo e
                        (if (= :lambdaisland.tools.namespace.dependency/circular-dependency
                               (:reason (ex-data e)))
-                         (assoc tracker ::error? true)
+                         (assoc tracker ::tracker-error e)
                          (throw e))))]
 
     (when (or (= watcher-type :hawk) (::hawk-opts config))
