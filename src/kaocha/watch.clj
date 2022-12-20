@@ -42,18 +42,6 @@
 (defn drain-queue! [q]
   (doall (take-while identity (repeatedly #(qpoll q)))))
 
-(defn apply-to-first-unskipped-suite [config f]
-  (let [applied? (volatile! false)]
-    (update config :kaocha/tests
-            (fn [suites]
-              (mapv (fn [suite]
-                      (if (and (not @applied?)
-                               (not (::testable/skip suite)))
-                        (do (vreset! applied? true)
-                            (f suite))
-                        (assoc suite ::testable/skip true)))
-                    suites)))))
-
 (defn- try-run [config focus {::keys [tracker-error] :as tracker}]
   (let [config (if (seq focus)
                  (assoc config :kaocha.filter/focus focus)
@@ -313,10 +301,10 @@ errors as test errors."
                       (set/union (watch-paths config)
                                  (set (map #(.getParentFile (.getCanonicalFile %)) (find-ignore-files "."))))
                       (watch-paths config))
-        ;; scenarios:
-        ;; 1. tracker immediately fails with circular dependency before running tests
-        ;; 2. tracker fails with circular dependency between test runs
         tracker (ctn-track/tracker)
+        ;; if t.n fails with a circular dependency, skip reloading
+        ;; and running test, then report the failure as a compilation error.
+        ;; keep trying to resurrect the tracker
         tracker (try (-> tracker
                          (ctn-dir/scan-dirs watch-paths)
                          (dissoc :lambdaisland.tools.namespace.track/unload
