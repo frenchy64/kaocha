@@ -295,7 +295,7 @@ errors as test errors."
                          (ctn-dir/scan-dirs watch-paths)
                          (dissoc :lambdaisland.tools.namespace.track/unload
                                  :lambdaisland.tools.namespace.track/load))
-                     (catch ExceptionInfo e
+                     (catch clojure.lang.ExceptionInfo e
                        (if (= :lambdaisland.tools.namespace.dependency/circular-dependency
                               (:reason (ex-data e)))
                          (do (println e)
