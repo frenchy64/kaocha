@@ -70,7 +70,6 @@
     result))
 
 (defn track-reload! [{::keys [tracker-error] :as tracker}]
-  (prn `track-reload! (if tracker-error "ERROR!" "GOOD"))
   (cond-> (assoc tracker ::ctn-file/load-error {})
     (not tracker-error) ctn-reload/track-reload))
 
@@ -95,12 +94,10 @@
 
 (defn drain-and-rescan! [q tracker watch-paths]
   (drain-queue! q)
-  (try (let [res (ctn-dir/scan-dirs tracker watch-paths)]
-         (prn `drain-queue! "GOOD"))
+  (try (ctn-dir/scan-dirs tracker watch-paths)
        (catch clojure.lang.ExceptionInfo e
          (if (circular-dependency? e)
-           (do (prn `drain-and-rescan! "CYCLE DETECTED")
-               (assoc tracker ::tracker-error e))
+           (assoc tracker ::tracker-error e)
            (throw e)))))
 
 (defn glob?
@@ -326,8 +323,7 @@ errors as test errors."
                                  :lambdaisland.tools.namespace.track/load))
                      (catch clojure.lang.ExceptionInfo e
                        (if (circular-dependency? e)
-                         (do (prn `run* "CYCLE DETECTED")
-                             (assoc tracker ::tracker-error e))
+                         (assoc tracker ::tracker-error e)
                          (throw e))))]
 
     (when (or (= watcher-type :hawk) (::hawk-opts config))
