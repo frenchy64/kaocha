@@ -48,7 +48,7 @@
             (fn [suites]
               (mapv (fn [suite]
                       (if (and (not @applied?)
-                               (not (::testable/skip true)))
+                               (not (::testable/skip suite)))
                         (do (vreset! applied? true)
                             (f suite))
                         (assoc suite ::testable/skip true)))
