@@ -41,15 +41,18 @@
                             (when (some? randomize?)
                               {::randomize? randomize?}))]
       (if (::randomize? config)
-        (merge {::seed (or seed (rand-int Integer/MAX_VALUE))} config)
+        (merge {::seed (or seed (rand-int Integer/MAX_VALUE))
+                ::randomized-seed? (not seed)}
+               config)
         config)))
 
-  (pre-run [test-plan]
+  (post-load [test-plan]
     (if (::randomize? test-plan)
       (let [rng (rng (::seed test-plan))]
-        (->> test-plan
-             straight-sort
-             (rng-sort rng)))
+        (assoc (->> test-plan
+                    straight-sort
+                    (rng-sort rng))
+               ::randomized true))
       test-plan))
 
   (post-run [test-plan]

@@ -1,6 +1,7 @@
 (ns kaocha.plugin.filter
   (:require [kaocha.plugin :as plugin :refer [defplugin]]
             [kaocha.testable :as testable]
+            [kaocha.plugin.randomize :as-alias randomize]
             [clojure.set :as set]
             [kaocha.output :as output]))
 
@@ -137,7 +138,7 @@
   (case partition-strategy
     :test (let [enabled-test-paths (fn enabled-test-paths
                                      [testable path]
-                                     (if (::testable/skip testable)
+                                     (if-not (::testable/skip testable)
                                        []
                                        (mapv testable
                                              (if-some [tests (:kaocha.test-plan/tests testable)]
@@ -145,14 +146,13 @@
                                                      tests)
                                                []))))
                 enabled-tests (enabled-test-paths suite [])
-                tests-for-this-partition (set (nth (partition-indices-into partitions enabled-tests)
-                                                   partition-index))]
-            (prn "tests-for-this-partition" tests-for-this-partition)
+                tests-to-skip (mapcat identity
+                                      (assoc (partition-indices-into partitions enabled-tests)
+                                             partition-index []))]
+            (prn "tests-to-skip" tests-to-skip)
             (reduce (fn [suite path]
-                      (cond-> suite
-                        (not (tests-for-this-partition path))
-                        (assoc-in suite (conj path :kaocha.testable/skip) true)))
-                    suite enabled-tests))
+                      (assoc-in suite (conj path :kaocha.testable/skip) true))
+                    suite tests-to-skip))
     suite))
 
 (defplugin kaocha.plugin/filter
@@ -232,7 +232,12 @@
                      (partition-suites (:kaocha.filter/partition config)))))))
 
   (post-load [test-plan]
-    (let [{:kaocha.filter/keys [focus focus-meta] :as config} (:kaocha/cli-options test-plan)]
+    (let [{:kaocha.filter/keys [focus focus-meta]} (:kaocha/cli-options test-plan)
+          config testable/*config*]
+      (when (and (:kaocha.filter/partition config)
+                 (::randomize/randomized test-plan)
+                 (::randomize/randomized-seed? config))
+        (throw (ex-info "Cannot partition tests with a randomized seed! Either set --seed or move kaocha.plugin/randomize after kaocha.plugin/filter." {})))
       (when (and (seq focus) (empty? (filter #(matches? % focus nil) (testable/test-seq test-plan))))
         (output/warn ":focus " focus " did not match any tests."))
       (let [test-plan (update test-plan :kaocha.filter/focus-meta remove-missing-metadata-keys test-plan)

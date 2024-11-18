@@ -22,8 +22,8 @@ Here's an example test configuration with a single test suite:
  :kaocha/fail-fast?                  false
  :kaocha/color?                      true
  :kaocha/reporter                    [kaocha.report/dots]
- :kaocha/plugins                     [:kaocha.plugin/randomize
-                                      :kaocha.plugin/filter
+ :kaocha/plugins                     [:kaocha.plugin/filter
+                                      :kaocha.plugin/randomize
                                       :kaocha.plugin/capture-output
                                       :kaocha.plugin/profiling]
  :kaocha.plugin.randomize/seed       950716166
