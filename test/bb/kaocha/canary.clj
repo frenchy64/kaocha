@@ -32,12 +32,8 @@
                             current-wd suite)
             partitions 5]
         (println (format "Partitions for %s: %s" repo-name partitions))
-        (run! (comp println deref)
-              (doall
-                (for [partition-index (range partitions)]
-                  (future
-                    (let [{:keys [out err]}
-                          (shell {:dir repo-dir :out :string :err :string}
-                                 (format "%s --partition-index %s --partitions %s --partition-strategy :test"
-                                         command partition-index partitions))]
-                      (str err out))))))))))
+        (doseq [partition-index (range partitions)
+                :let [cmd (format "%s --partition-index %s --partitions %s --partition-strategy :test"
+                                  command partition-index partitions)]]
+          (println cmd)
+          (shell {:dir repo-dir} cmd))))))
