@@ -1,7 +1,7 @@
 (ns kaocha.plugin.filter
   (:require [kaocha.plugin :as plugin :refer [defplugin]]
             [kaocha.testable :as testable]
-            [kaocha.plugin.randomize :as-alias randomize]
+            [kaocha.plugin.randomize :as randomize]
             [clojure.set :as set]
             [clojure.walk :as walk]
             [kaocha.output :as output]))
