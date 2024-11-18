@@ -57,7 +57,7 @@
                     ([opts]
                      (cond-> testable
                        (:kaocha.test-plan/tests testable)
-                       (update :kaocha.test-plan/tests (partial map #(filter-testable % opts))))))
+                       (update :kaocha.test-plan/tests (partial mapv #(filter-testable % opts))))))
         skip-test (fn []
                     (assoc testable ::testable/skip true))]
     (cond
@@ -98,9 +98,68 @@
       :else
       testable)))
 
+(defn partition-indices-into [npartitions coll]
+  (let [coll (vec coll)
+        cnt (count coll)
+        min-tests-per-partition (quot cnt npartitions)
+        num-each-partition (vec (repeat npartitions min-tests-per-partition))
+        extra (- cnt (* npartitions min-tests-per-partition))
+        _ (assert (<= extra npartitions) "not enough room to distribute remaining tests")
+        num-each-partition (reduce (fn [v i]
+                                     (update v i inc))
+                                   num-each-partition (range extra))
+        [_ partitioned] (reduce (fn [[coll partitions] n]
+                                  (let [[this after] (split-at n coll)]
+                                    [after (conj partitions this)]))
+                                [coll []] num-each-partition)]
+    (assert (= npartitions (count partitioned)))
+    (assert (= (mapcat identity partitioned) coll))
+    partitioned))
+
+(defn partition-suites [{:keys [partition-strategy partition-index partitions]} suites]
+  (case partition-strategy
+    :suite (let [suites (vec suites)
+                 enabled-suites (into [] (keep-indexed
+                                           (fn [i suite]
+                                             (when-not (:kaocha.testable/skip suite)
+                                               i)))
+                                      suites)
+                 suites-for-this-partition (set (nth (partition-indices-into partitions enabled-suites)
+                                                     partition-index))]
+             (prn "suites-for-this-partition" suites-for-this-partition)
+             (into [] (map-indexed (fn [i suite]
+                                     (assoc suite :kaocha.testable/skip (not (suites-for-this-partition i)))))
+                   suites))
+    suites))
+
+(defn partition-suite [{:keys [partition-strategy partition-index partitions] :as conf} suite]
+  (prn "partition-suite" conf)
+  (case partition-strategy
+    :test (let [enabled-test-paths (fn enabled-test-paths
+                                     [testable path]
+                                     (if (::testable/skip testable)
+                                       []
+                                       (mapv testable
+                                             (if-some [tests (:kaocha.test-plan/tests testable)]
+                                               (into [] (map-indexed #(enabled-test-paths %2 (conj path :kaocha.test-plan/tests %1)))
+                                                     tests)
+                                               []))))
+                enabled-tests (enabled-test-paths suite [])
+                tests-for-this-partition (set (nth (partition-indices-into partitions enabled-tests)
+                                                   partition-index))]
+            (prn "tests-for-this-partition" tests-for-this-partition)
+            (reduce (fn [suite path]
+                      (cond-> suite
+                        (not (tests-for-this-partition path))
+                        (assoc-in suite (conj path :kaocha.testable/skip) true)))
+                    suite enabled-tests))
+    suite))
+
 (defplugin kaocha.plugin/filter
   (cli-options [opts]
-    (let [parse #(keyword (if (= \: (first %)) (subs % 1) %))]
+    (let [parse #(keyword (if (= \: (first %)) (subs % 1) %))
+          parse-int #(Integer/parseInt %)
+          assoc-partition-config (fn [m k v] (assoc-in m [:kaocha.filter/partition k] v))]
       (conj opts
             [nil "--skip SYM" "Skip tests with this ID and their children."
              :parse-fn parse
@@ -113,15 +172,39 @@
              :assoc-fn accumulate]
             [nil "--focus-meta SYM" "Only run tests where this metadata key is truthy."
              :parse-fn parse
-             :assoc-fn accumulate])))
+             :assoc-fn accumulate]
+            [nil  "--partition-index NAT-INT"    "Zero-based index of the partition of the test suite to run."
+             :parse-fn parse-int]
+            [nil  "--partitions POS-INT"         "The number of partitions to divide the test suite into."
+             :parse-fn parse-int]
+            [nil  "--partition-strategy STRING"  "Approach to partition tests by."
+             :parse-fn parse])))
 
   (config [config]
-    (let [{:keys [skip focus skip-meta focus-meta]} (:kaocha/cli-options config)]
+    (let [{:keys [skip focus skip-meta focus-meta partitions partition-index partition-strategy]} (:kaocha/cli-options config)
+          choose-partition (when (or partition-index partitions)
+                             (fn [config]
+                               ;;TODO assert at parse time
+                               (when-not (and partition-index partitions)
+                                 (throw (ex-info "Must provide --partition-index and --partition together"
+                                                 {})))
+                               (when-not (pos? partitions)
+                                 (throw (ex-info "--partitions must be positive"
+                                                 {})))
+                               (when-not (and (<= 0 partition-index)
+                                              (< partition-index partitions))
+                                 (throw (ex-info "--partition-index must be non-negative and less than --partitions"
+                                                 {})))
+                               ;;TODO group at parse time?
+                               (assoc config :kaocha.filter/partition {:partition-strategy (or partition-strategy :suite)
+                                                                       :partition-index partition-index
+                                                                       :partitions partitions})))]
       (cond-> config
         (seq skip)       (assoc :kaocha.filter/skip skip)
         (seq focus)      (assoc :kaocha.filter/focus focus)
         (seq skip-meta)  (assoc :kaocha.filter/skip-meta skip-meta)
-        (seq focus-meta) (assoc :kaocha.filter/focus-meta focus-meta))))
+        (seq focus-meta) (assoc :kaocha.filter/focus-meta focus-meta)
+        choose-partition choose-partition)))
 
   ;; In an earlier pass already filter at the test suite level. We don't have
   ;; the full test plan yet, but if a suite itself matches any of the focus/skip
@@ -137,18 +220,19 @@
       (update config
               :kaocha/tests
               (fn [suites]
-                (mapv (fn [suite]
-                        (if (and
-                             (not (:kaocha.testable/skip suite)) ; short circuit if this has been set elsewhere, saves a few cycles
-                             (or (matches? suite skip skip-meta)
-                                 (and (seq focus-suites)
-                                      (not (contains? focus-suites (:kaocha.testable/id suite))))))
-                          (assoc suite :kaocha.testable/skip true)
-                          suite))
-                      suites)))))
+                (->> (mapv (fn [suite]
+                             (if (and
+                                   (not (:kaocha.testable/skip suite)) ; short circuit if this has been set elsewhere, saves a few cycles
+                                   (or (matches? suite skip skip-meta)
+                                       (and (seq focus-suites)
+                                            (not (contains? focus-suites (:kaocha.testable/id suite))))))
+                               (assoc suite :kaocha.testable/skip true)
+                               suite))
+                           suites)
+                     (partition-suites (:kaocha.filter/partition config)))))))
 
   (post-load [test-plan]
-    (let [{:kaocha.filter/keys [focus focus-meta]} (:kaocha/cli-options test-plan)]
+    (let [{:kaocha.filter/keys [focus focus-meta] :as config} (:kaocha/cli-options test-plan)]
       (when (and (seq focus) (empty? (filter #(matches? % focus nil) (testable/test-seq test-plan))))
         (output/warn ":focus " focus " did not match any tests."))
       (let [test-plan (update test-plan :kaocha.filter/focus-meta remove-missing-metadata-keys test-plan)
@@ -166,4 +250,6 @@
                                    (dissoc :kaocha.filter/focus :kaocha.filter/focus-meta)
                                    (filter-testable (filters test-plan))))))]
         (-> test-plan
-            (update :kaocha.test-plan/tests (partial map filter-suite)))))))
+            (update :kaocha.test-plan/tests #(->> %
+                                                  (mapv filter-suite)
+                                                  (partition-suite (:kaocha.filter/partition config)))))))))

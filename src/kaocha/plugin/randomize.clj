@@ -44,7 +44,7 @@
         (merge {::seed (or seed (rand-int Integer/MAX_VALUE))} config)
         config)))
 
-  (post-load [test-plan]
+  (pre-run [test-plan]
     (if (::randomize? test-plan)
       (let [rng (rng (::seed test-plan))]
         (->> test-plan

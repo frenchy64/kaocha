@@ -209,3 +209,8 @@
                                                                                          :kaocha.testable/meta {:random true}}]}]
                                                              :kaocha.filter/focus-meta #{:positive}}]
                                    :kaocha.filter/focus #{:positive}}))))
+
+(deftest partition-into-test
+  (is (= [[0] [1] [2] [3]] (f/partition-indices-into 4 ["a" "b" "c" "d"])))
+  (is (= [[0 1] [2] [3]] (f/partition-indices-into 3 ["a" "b" "c" "d"])))
+  (is (= [[0] [1] [2] [3] []] (f/partition-indices-into 5 ["a" "b" "c" "d"]))))

@@ -1,7 +1,8 @@
-(ns kaocha.canary 
+(ns kaocha.canary
   "Babashka script for checking out and running test suites"
   (:require [babashka.fs :as fs]
-            [babashka.process :refer [shell]]))
+            [babashka.process :refer [shell]]
+            [clojure.edn :as edn]))
 
 (def github-clone-url "https://github.com")
 
@@ -27,5 +28,16 @@
     (println "Testing " repo-name)
     (let [repo-dir (str temp-dir "/" repo-name)]
       (shell (format "git clone %s %s" (str github-clone-url "/" repo-name) repo-dir))
-      (shell {:dir repo-dir}
-             (format "clojure -Sdeps '{:aliases {:test-local {:override-deps {lambdaisland/kaocha {:local/root \"%s/\"}}}}}' -A:test:test-local -m kaocha.runner %s" current-wd suite)))))
+      (let [command (format "clojure -Sdeps '{:aliases {:test-local {:override-deps {lambdaisland/kaocha {:local/root \"%s/\"}}}}}' -A:test:test-local -m kaocha.runner %s"
+                            current-wd suite)
+            partitions 5]
+        (println (format "Partitions for %s: %s" repo-name partitions))
+        (run! (comp println deref)
+              (doall
+                (for [partition-index (range partitions)]
+                  (future
+                    (let [{:keys [out err]}
+                          (shell {:dir repo-dir :out :string :err :string}
+                                 (format "%s --partition-index %s --partitions %s --partition-strategy :ns"
+                                         command partition-index partitions))]
+                      (str err out))))))))))

@@ -30,7 +30,7 @@
                                             {:kaocha.testable/id :foo.hello-test/pass-3}
                                             {:kaocha.testable/id :foo.hello-test/pass-2}]}]}
 
-                (plugin/run-hook :kaocha.hooks/post-load
+                (plugin/run-hook :kaocha.hooks/pre-run
                                  (-> test-suite
                                      (assoc :kaocha.plugin.randomize/seed 123
                                             :kaocha.plugin.randomize/randomize? true)
@@ -46,7 +46,7 @@
                                             {:kaocha.testable/id :foo.hello-test/fail-1}
                                             {:kaocha.testable/id :foo.hello-test/pass-1}]}]}
 
-                (plugin/run-hook :kaocha.hooks/post-load
+                (plugin/run-hook :kaocha.hooks/pre-run
                                  (-> test-suite
                                      (assoc :kaocha.plugin.randomize/seed 456
                                             :kaocha.plugin.randomize/randomize? true)
