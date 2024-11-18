@@ -38,6 +38,6 @@
                   (future
                     (let [{:keys [out err]}
                           (shell {:dir repo-dir :out :string :err :string}
-                                 (format "%s --partition-index %s --partitions %s --partition-strategy :ns"
+                                 (format "%s --partition-index %s --partitions %s --partition-strategy :test"
                                          command partition-index partitions))]
                       (str err out))))))))))

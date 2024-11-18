@@ -3,6 +3,7 @@
             [kaocha.testable :as testable]
             [kaocha.plugin.randomize :as-alias randomize]
             [clojure.set :as set]
+            [clojure.walk :as walk]
             [kaocha.output :as output]))
 
 (defn- accumulate [m k v]
@@ -99,7 +100,7 @@
       :else
       testable)))
 
-(defn partition-indices-into [npartitions coll]
+(defn partition-into [npartitions coll]
   (let [coll (vec coll)
         cnt (count coll)
         min-tests-per-partition (quot cnt npartitions)
@@ -117,7 +118,7 @@
     (assert (= (mapcat identity partitioned) coll))
     partitioned))
 
-(defn partition-suites [{:keys [partition-strategy partition-index partitions]} suites]
+(defn partition-suites-by-suite [{:keys [partition-strategy partition-index partitions]} suites]
   (case partition-strategy
     :suite (let [suites (vec suites)
                  enabled-suites (into [] (keep-indexed
@@ -125,35 +126,44 @@
                                              (when-not (:kaocha.testable/skip suite)
                                                i)))
                                       suites)
-                 suites-for-this-partition (set (nth (partition-indices-into partitions enabled-suites)
+                 suites-for-this-partition (set (nth (partition-into partitions enabled-suites)
                                                      partition-index))]
              (prn "suites-for-this-partition" suites-for-this-partition)
-             (into [] (map-indexed (fn [i suite]
-                                     (assoc suite :kaocha.testable/skip (not (suites-for-this-partition i)))))
+             (mapv (fn [suite]
+                     (assoc suite :kaocha.testable/skip (not (suites-for-this-partition suite))))
                    suites))
     suites))
 
-(defn partition-suite [{:keys [partition-strategy partition-index partitions] :as conf} suite]
+(defn partition-suites-by-test [{:keys [partition-strategy partition-index partitions] :as conf} suites]
   (prn "partition-suite" conf)
   (case partition-strategy
-    :test (let [enabled-test-paths (fn enabled-test-paths
+    :test (let [;; make indexable
+                suites (walk/postwalk (fn [s]
+                                        (cond-> s
+                                          (sequential? s) vec))
+                                      suites)
+                enabled-test-paths (fn enabled-test-paths
                                      [testable path]
-                                     (if-not (::testable/skip testable)
+                                     (if (::testable/skip testable)
                                        []
-                                       (mapv testable
-                                             (if-some [tests (:kaocha.test-plan/tests testable)]
-                                               (into [] (map-indexed #(enabled-test-paths %2 (conj path :kaocha.test-plan/tests %1)))
-                                                     tests)
-                                               []))))
-                enabled-tests (enabled-test-paths suite [])
-                tests-to-skip (mapcat identity
-                                      (assoc (partition-indices-into partitions enabled-tests)
-                                             partition-index []))]
+                                       (if-some [tests (:kaocha.test-plan/tests testable)]
+                                         (into [] (comp (map-indexed #(enabled-test-paths %2 (conj path :kaocha.test-plan/tests %1)))
+                                                        cat)
+                                               tests)
+                                         (cond-> []
+                                           (and (map? testable) (not (::testable/skip testable)))
+                                           (conj path)))))
+                enabled-tests (into [] (comp (map-indexed #(enabled-test-paths %2 [%1]))
+                                             cat)
+                                    suites)
+                _ (prn "enabled-tests" enabled-tests)
+                tests-to-skip (nth (partition-into partitions enabled-tests)
+                                   partition-index)]
             (prn "tests-to-skip" tests-to-skip)
-            (reduce (fn [suite path]
-                      (assoc-in suite (conj path :kaocha.testable/skip) true))
-                    suite tests-to-skip))
-    suite))
+            (reduce (fn [suites path]
+                      (assoc-in suites (conj path :kaocha.testable/skip) true))
+                    suites tests-to-skip))
+    suites))
 
 (defplugin kaocha.plugin/filter
   (cli-options [opts]
@@ -229,7 +239,7 @@
                                (assoc suite :kaocha.testable/skip true)
                                suite))
                            suites)
-                     (partition-suites (:kaocha.filter/partition config)))))))
+                     (partition-suites-by-suite (:kaocha.filter/partition config)))))))
 
   (post-load [test-plan]
     (let [{:kaocha.filter/keys [focus focus-meta]} (:kaocha/cli-options test-plan)
@@ -257,4 +267,4 @@
         (-> test-plan
             (update :kaocha.test-plan/tests #(->> %
                                                   (mapv filter-suite)
-                                                  (partition-suite (:kaocha.filter/partition config)))))))))
+                                                  (partition-suites-by-test (:kaocha.filter/partition config)))))))))
