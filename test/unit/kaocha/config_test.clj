@@ -25,8 +25,8 @@
   {:kaocha/reporter   ['kaocha.report/dots]
    :kaocha/color?     true
    :kaocha/fail-fast? false
-   :kaocha/plugins [:kaocha.plugin/filter
-                    :kaocha.plugin/randomize
+   :kaocha/plugins [:kaocha.plugin/randomize
+                    :kaocha.plugin/filter
                     :kaocha.plugin/capture-output]
    :kaocha/tests [{:kaocha.testable/type    :kaocha.type/clojure.test
                    :kaocha.testable/id      :unit

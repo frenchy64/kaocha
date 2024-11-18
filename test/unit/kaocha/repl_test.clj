@@ -10,8 +10,8 @@
          :kaocha/reporter [kaocha.report.progress/report]
          :kaocha/color? false
          :kaocha/fail-fast? true
-         :kaocha/plugins [:kaocha.plugin/filter
-                          :kaocha.plugin/randomize
+         :kaocha/plugins [:kaocha.plugin/randomize
+                          :kaocha.plugin/filter
                           :kaocha.plugin/capture-output
                           :kaocha.plugin.alpha/xfail]}
 
@@ -24,8 +24,8 @@
          :kaocha/reporter [kaocha.report.progress/report]
          :kaocha/color? true
          :kaocha/fail-fast? true
-         :kaocha/plugins [:kaocha.plugin/filter
-                          :kaocha.plugin/randomize
+         :kaocha/plugins [:kaocha.plugin/randomize
+                          :kaocha.plugin/filter
                           :kaocha.plugin/capture-output
                           :kaocha.plugin.alpha/xfail]}
         (repl/config {:color? true :config-file "fixtures/custom_config.edn"}))))

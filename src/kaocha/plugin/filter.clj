@@ -134,14 +134,21 @@
                    suites))
     suites))
 
-(defn partition-suites-by-test [{:keys [partition-strategy partition-index partitions] :as conf} suites]
-  (prn "partition-suite" conf)
+(defn partition-test-plan-by-test [test-plan {:keys [partition-strategy partition-index partitions] :as partition-conf}]
+  (prn "partition-suite" partition-conf)
   (case partition-strategy
-    :test (let [;; make indexable
-                suites (walk/postwalk (fn [s]
-                                        (cond-> s
-                                          (sequential? s) vec))
-                                      suites)
+    :test (let [config testable/*config*
+                randomly-randomized? (and (::randomize/randomized test-plan)
+                                          (::randomize/randomized-seed? config))
+                _ (when randomly-randomized?
+                    (output/warn "Please either provide consistent --seed to all partitions or move :kaocha.plugin/filter before :kaocha.plugin/randomize"))
+                test-plan (cond-> test-plan
+                            randomly-randomized? randomize/straight-sort)
+                ;; make indexable
+                test-plan (walk/postwalk (fn [s]
+                                           (cond-> s
+                                             (sequential? s) vec))
+                                         test-plan)
                 enabled-test-paths (fn enabled-test-paths
                                      [testable path]
                                      (if (::testable/skip testable)
@@ -153,17 +160,18 @@
                                          (cond-> []
                                            (and (map? testable) (not (::testable/skip testable)))
                                            (conj path)))))
-                enabled-tests (into [] (comp (map-indexed #(enabled-test-paths %2 [%1]))
-                                             cat)
-                                    suites)
+                enabled-tests (enabled-test-paths test-plan [])
                 _ (prn "enabled-tests" enabled-tests)
                 tests-to-skip (nth (partition-into partitions enabled-tests)
-                                   partition-index)]
-            (prn "tests-to-skip" tests-to-skip)
-            (reduce (fn [suites path]
-                      (assoc-in suites (conj path :kaocha.testable/skip) true))
-                    suites tests-to-skip))
-    suites))
+                                   partition-index)
+                _ (prn "tests-to-skip" tests-to-skip)
+                test-plan (reduce (fn [test-plan path]
+                                    (assoc-in test-plan (conj path :kaocha.testable/skip) true))
+                                  test-plan tests-to-skip)]
+            ;; re-randomize the current partition
+            (cond-> test-plan
+              randomly-randomized? randomize/randomize-test-plan))
+    test-plan))
 
 (defplugin kaocha.plugin/filter
   (cli-options [opts]
@@ -244,10 +252,6 @@
   (post-load [test-plan]
     (let [{:kaocha.filter/keys [focus focus-meta]} (:kaocha/cli-options test-plan)
           config testable/*config*]
-      (when (and (:kaocha.filter/partition config)
-                 (::randomize/randomized test-plan)
-                 (::randomize/randomized-seed? config))
-        (throw (ex-info "Cannot partition tests with a randomized seed! Either set --seed or move kaocha.plugin/randomize after kaocha.plugin/filter." {})))
       (when (and (seq focus) (empty? (filter #(matches? % focus nil) (testable/test-seq test-plan))))
         (output/warn ":focus " focus " did not match any tests."))
       (let [test-plan (update test-plan :kaocha.filter/focus-meta remove-missing-metadata-keys test-plan)
@@ -265,6 +269,5 @@
                                    (dissoc :kaocha.filter/focus :kaocha.filter/focus-meta)
                                    (filter-testable (filters test-plan))))))]
         (-> test-plan
-            (update :kaocha.test-plan/tests #(->> %
-                                                  (mapv filter-suite)
-                                                  (partition-suites-by-test (:kaocha.filter/partition config)))))))))
+            (update :kaocha.test-plan/tests (partial map filter-suite))
+            (partition-test-plan-by-test (:kaocha.filter/partition config)))))))
