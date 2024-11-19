@@ -74,11 +74,11 @@ jobs:
           path: kaocha-profiling.edn
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     needs: setup
     strategy:
       matrix:
-        id: [0,1,2,3,4]
+        id: [0,1,2,3,4,5,6,7,8,9]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
