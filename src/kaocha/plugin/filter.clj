@@ -164,6 +164,7 @@
 (defn test-weights [{:kaocha.plugin.profiling/keys [prior-profiling] :as test-plan}
                     enabled-tests]
   (assert prior-profiling "Must provide profiling results via --read-profiling-file with :kaocha.plugin/profiling plugin.")
+  (prn prior-profiling)
   (let [var->duration (not-empty
                         (into {} (map (fn [[k v]]
                                         (assert (= 1 (count v)) (str "Multiple results for " (pr-str k) ": " (pr-str v)))
@@ -172,7 +173,7 @@
                                           [k weight])))
                               (:kaocha.type/var prior-profiling)))
         average-duration (when var->duration
-                           (/ (apply + (keys var->duration)) (count var->duration)))]
+                           (/ (apply + (vals var->duration)) (count var->duration)))]
     (mapv (fn [{:keys [id path]}]
             (var->duration id average-duration))
           enabled-tests)))
@@ -181,9 +182,10 @@
   (prn "partition-suite" partition-conf)
   (case partition-strategy
     (:var :var-time)
-    (let [config testable/*config*
-          randomly-randomized? (and (::randomize/randomized test-plan)
-                                    (::randomize/randomized-seed? config))
+    (let [randomly-randomized? (and (::randomize/randomized test-plan)
+                                    (let [b (::randomize/randomized-seed? test-plan)]
+                                      (assert (boolean? b))
+                                      b))
           _ (when randomly-randomized?
               (output/warn "Please either provide consistent --seed to all partitions or move :kaocha.plugin/filter before :kaocha.plugin/randomize"))
           test-plan (cond-> test-plan
@@ -319,4 +321,4 @@
                                    (filter-testable (filters test-plan))))))]
         (-> test-plan
             (update :kaocha.test-plan/tests (partial map filter-suite))
-            (partition-test-plan-by-test (:kaocha.filter/partition config)))))))
+            (partition-test-plan-by-test (:kaocha.filter/partition test-plan)))))))
