@@ -49,6 +49,7 @@ jobs:
         if: steps.cache-check.cache-hit != 'true'
         run: ./bin/kaocha --version
       - name: Save Clojure dependencies
+        if: steps.cache-check.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           path: ${{ env.CLOJURE_CACHE_PATHS }}
