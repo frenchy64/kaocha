@@ -2,6 +2,7 @@ name: Test partitioned builds
 
 on:
   push:
+    branches:
     - main
   pull_request:
 
