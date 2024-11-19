@@ -9,6 +9,7 @@ on:
 env:
   # bump to purge caches
   ACTIONS_CACHE_VERSION: v1
+  CLOJURE_CLI_VERSION: 1.12.0.1479
   CLOJURE_CACHE_PATHS: |
     ~/.m2/repository
     ~/.gitlibs
@@ -38,7 +39,7 @@ jobs:
         if: steps.cache-check.outputs.cache-hit != 'true'
         uses: DeLaGuardo/setup-clojure@13.0
         with:
-          cli: latest
+          cli: ${{ env.CLOJURE_CLI_VERSION }}
       - name: Download Clojure deps
         if: steps.cache-check.outputs.cache-hit != 'true'
         working-directory: 
@@ -92,6 +93,16 @@ jobs:
           name: kaocha-profiling
       - name: Ensure profiling file exists
         run: cat kaocha-profiling.edn
+      - name: Install clojure tools
+        uses: DeLaGuardo/setup-clojure@13.0
+        with:
+          cli: ${{ env.CLOJURE_CLI_VERSION }}
+      - name: Restore Clojure cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.CLOJURE_CACHE_PATHS }}
+          key: cljdeps-${{ env.ACTIONS_CACHE_VERSION }}-${{ hashFiles('deps.edn') }}
+          fail-on-cache-miss: true
       - name: Run tests
         run: ./bin/kaocha --read-profiling-file kaocha-profiling.edn --write-profiling-file current-kaocha-profiling-${{ strategy.job-index }}.edn --partition-index ${{ strategy.job-index }} --partitions ${{ strategy.job-total }} --partition-strategy :test-time
       - name: Upload profiling results
