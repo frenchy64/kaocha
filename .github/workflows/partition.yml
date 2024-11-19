@@ -62,8 +62,9 @@ jobs:
       - name: Ensure profiling file exists
         run: |
           if [ ! -f kaocha-profiling.edn ]; then
-            echo '{}' > kaocha-profiling.edn
+            touch kaocha-profiling.edn
           fi
+          set -x
           cat kaocha-profiling.edn
       - name: Share profiling results with tests
         if: steps.profiling.outputs.cache-matched-key
