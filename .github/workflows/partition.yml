@@ -45,7 +45,6 @@ jobs:
         with:
           cli: latest
       - name: Save Clojure dependencies
-        id: cache-check
         uses: actions/cache/save@v4
         with:
           path: ${{ env.CLOJURE_CACHE_PATHS }}
