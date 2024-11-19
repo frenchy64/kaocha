@@ -38,6 +38,7 @@ jobs:
         if: steps.cache-check.cache-hit != 'true'
         uses: actions/setup-java@v4
         with:
+          distribution: 'temurin'
           java-version: '21'
       - name: Install clojure tools
         if: steps.cache-check.cache-hit != 'true'
