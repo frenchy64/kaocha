@@ -113,9 +113,9 @@ jobs:
         with:
           pattern: current-kaocha-profiling-*.edn
           merge-multiple: true
-          path: target/test-results
       - name: Combine results
         run: |
+          rm -f kaocha-profiling.edn
           for i in current-kaocha-profiling-*.edn; do cat $i >> kaocha-profiling.edn; done
           cat kaocha-profiling.edn
       - name: Update Profiling Cache
