@@ -90,7 +90,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: kaocha-profiling
-          path: kaocha-profiling.edn
       - name: Ensure profiling file exists
         run: cat kaocha-profiling.edn
       - name: Run tests
