@@ -19,11 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Checkout deps file
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          sparse-checkout: deps.edn
-          sparse-checkout-cone-mode: false
       - name: Check if we need to cache Clojure dependencies
         id: cache-check
         uses: actions/cache/restore@v4
@@ -31,9 +28,6 @@ jobs:
           path: ${{ env.CLOJURE_CACHE_PATHS }}
           key: cljdeps-${{ env.ACTIONS_CACHE_VERSION }}-${{ hashFiles('deps.edn') }}
           lookup-only: true
-      - name: Checkout
-        if: steps.cache-check.cache-hit != 'true'
-        uses: actions/checkout@v4
       - name: Prepare java
         if: steps.cache-check.cache-hit != 'true'
         uses: actions/setup-java@v4
