@@ -212,6 +212,14 @@
 
 (deftest partition-into-test
   (is (= [["a"] ["b"] ["c"] ["d"]] (f/partition-into 4 ["a" "b" "c" "d"])))
-  (is (= [["a" "b"] ["c"] ["d"]] (f/partition-into 3 ["a" "b" "c" "d"])))
+  (is (= [["a"] ["b"] ["c"] ["d"]] (f/partition-into 4 ["a" "b" "c" "d"]
+                                                     [2 1 1 1])))
+  (is (= [["a" "d"] ["b"] ["c"]] (f/partition-into 3 ["a" "b" "c" "d"]
+                                                   [1 1 1 1])))
+  (is (= [["a" "d"] ["b"] ["c"]] (f/partition-into 3 ["a" "b" "c" "d"]
+                                                     [1 1 1 1])))
+  (is (= [["b"] ["a" "d"] ["c"]] (f/partition-into 3 ["a" "b" "c" "d"]
+                                                   [1 2 1 1])))
+  (is (= [["a" "d"] ["b"] ["c"]] (f/partition-into 3 ["a" "b" "c" "d"])))
   (is (= [["a"] ["b"] ["c"] ["d"] []] (f/partition-into 5 ["a" "b" "c" "d"])))
   )

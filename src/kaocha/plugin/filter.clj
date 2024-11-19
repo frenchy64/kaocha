@@ -100,26 +100,46 @@
       :else
       testable)))
 
-(defn partition-into [npartitions coll]
-  (let [coll (vec coll)
-        cnt (count coll)
-        min-tests-per-partition (quot cnt npartitions)
-        num-each-partition (vec (repeat npartitions min-tests-per-partition))
-        extra (- cnt (* npartitions min-tests-per-partition))
-        _ (assert (<= extra npartitions) "not enough room to distribute remaining tests")
-        num-each-partition (reduce (fn [v i]
-                                     (update v i inc))
-                                   num-each-partition (range extra))
-        [_ partitioned] (reduce (fn [[coll partitions] n]
-                                  (let [[this after] (split-at n coll)]
-                                    [after (conj partitions this)]))
-                                [coll []] num-each-partition)]
-    (assert (= npartitions (count partitioned)))
-    (assert (= (mapcat identity partitioned) coll))
-    partitioned))
+(defn partition-into
+  ([npartitions coll] (partition-into npartitions coll (into [] (repeat (count coll) 1))))
+  ([npartitions coll weights]
+   {:pre [(pos-int? npartitions)
+          (vector? coll)
+          (vector? weights)
+          (= (count coll) (count weights))]}
+   (let [heaviest (reduce-kv (fn [m k v]
+                               (update m v (fnil conj []) k))
+                             (sorted-map-by (comp - compare)) weights)
+         total-weight (apply + weights)
+         target-partition-weight (/ total-weight npartitions)
+         partitioned (reduce (fn [acc idx]
+                               (let [idx-weight (weights idx)
+                                     smallest-partition (apply min-key :weight
+                                                               ;; maintain order if clashes
+                                                               (reverse acc))]
+                                 (update acc (:partition-idx smallest-partition)
+                                         (fn [p]
+                                           (-> p
+                                               (update :partition-indices conj idx)
+                                               (update :partition conj (nth coll idx))
+                                               (update :weight + idx-weight))))))
+                             (mapv #(do {:partition-idx %
+                                         :partition-indices []
+                                         :partition []
+                                         :weight 0})
+                                   (range npartitions))
+                             (mapcat identity (vals heaviest)))
+         partitions (mapv :partition partitioned)]
+     (assert (= (apply + (map count partitions)) (count coll))
+             [partitions coll])
+     (assert (= (sort (mapcat :partition-indices partitioned))
+                (range (count coll))))
+     (assert (every? (zipmap coll (repeat true)) (mapcat identity partitions)))
+     partitions)))
 
 (defn partition-suites-by-suite [{:keys [partition-strategy partition-index partitions]} suites]
   (case partition-strategy
+    ;;TODO :suite-time
     :suite (let [suites (vec suites)
                  enabled-suites (into [] (keep-indexed
                                            (fn [i suite]
@@ -137,40 +157,41 @@
 (defn partition-test-plan-by-test [test-plan {:keys [partition-strategy partition-index partitions] :as partition-conf}]
   (prn "partition-suite" partition-conf)
   (case partition-strategy
-    :test (let [config testable/*config*
-                randomly-randomized? (and (::randomize/randomized test-plan)
-                                          (::randomize/randomized-seed? config))
-                _ (when randomly-randomized?
-                    (output/warn "Please either provide consistent --seed to all partitions or move :kaocha.plugin/filter before :kaocha.plugin/randomize"))
-                test-plan (cond-> test-plan
-                            randomly-randomized? randomize/straight-sort)
-                ;; make indexable
-                test-plan (walk/postwalk (fn [s]
-                                           (cond-> s
-                                             (sequential? s) vec))
-                                         test-plan)
-                enabled-test-paths (fn enabled-test-paths
-                                     [testable path]
-                                     (if (::testable/skip testable)
-                                       []
-                                       (if-some [tests (:kaocha.test-plan/tests testable)]
-                                         (into [] (comp (map-indexed #(enabled-test-paths %2 (conj path :kaocha.test-plan/tests %1)))
-                                                        cat)
-                                               tests)
-                                         (cond-> []
-                                           (and (map? testable) (not (::testable/skip testable)))
-                                           (conj path)))))
-                enabled-tests (enabled-test-paths test-plan [])
-                _ (prn "enabled-tests" enabled-tests)
-                tests-to-skip (nth (partition-into partitions enabled-tests)
-                                   partition-index)
-                _ (prn "tests-to-skip" tests-to-skip)
-                test-plan (reduce (fn [test-plan path]
-                                    (assoc-in test-plan (conj path :kaocha.testable/skip) true))
-                                  test-plan tests-to-skip)]
-            ;; re-randomize the current partition
-            (cond-> test-plan
-              randomly-randomized? randomize/randomize-test-plan))
+    (:test :test-time)
+    (let [config testable/*config*
+          randomly-randomized? (and (::randomize/randomized test-plan)
+                                    (::randomize/randomized-seed? config))
+          _ (when randomly-randomized?
+              (output/warn "Please either provide consistent --seed to all partitions or move :kaocha.plugin/filter before :kaocha.plugin/randomize"))
+          test-plan (cond-> test-plan
+                      randomly-randomized? randomize/straight-sort)
+          ;; make indexable
+          test-plan (walk/postwalk (fn [s]
+                                     (cond-> s
+                                       (sequential? s) vec))
+                                   test-plan)
+          enabled-test-paths (fn enabled-test-paths
+                               [testable path]
+                               (if (::testable/skip testable)
+                                 []
+                                 (if-some [tests (:kaocha.test-plan/tests testable)]
+                                   (into [] (comp (map-indexed #(enabled-test-paths %2 (conj path :kaocha.test-plan/tests %1)))
+                                                  cat)
+                                         tests)
+                                   (cond-> []
+                                     (and (map? testable) (not (::testable/skip testable)))
+                                     (conj path)))))
+          enabled-tests (enabled-test-paths test-plan [])
+          _ (prn "enabled-tests" enabled-tests)
+          tests-to-skip (nth (partition-into partitions enabled-tests)
+                             partition-index)
+          _ (prn "tests-to-skip" tests-to-skip)
+          test-plan (reduce (fn [test-plan path]
+                              (assoc-in test-plan (conj path :kaocha.testable/skip) true))
+                            test-plan tests-to-skip)]
+      ;; re-randomize the current partition
+      (cond-> test-plan
+        randomly-randomized? randomize/randomize-test-plan))
     test-plan))
 
 (defplugin kaocha.plugin/filter

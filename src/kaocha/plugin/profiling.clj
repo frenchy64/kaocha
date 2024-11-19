@@ -31,12 +31,15 @@
         (let [form (edn/read {:eof eof} in)]
           (if (identical? eof form)
             forms
-            (recur (conj forms form))))))))
+            (recur (if (sequential? form)
+                     (into forms form)
+                     (conj forms form)))))))))
 
 (defn read-profiling-file [{:kaocha/keys [cli-options] :as config}]
   (when-some [f (:read-profiling-file cli-options)]
     (let [forms (file->forms f)]
-      (doto (apply merge-with #(merge-with into %1 %2) {} forms)
+      (assert (every? #(= 1 (::version %)) forms))
+      (doto (apply merge-with #(merge-with into %1 %2) {} (dissoc forms ::version))
         prn))))
 
 (defplugin kaocha.plugin/profiling
@@ -83,8 +86,9 @@
                                                             :kaocha.testable/id])))
                                 tests))
                 profiling-results
-                (into {} (map (fn [[k v]]
-                                [k (group-by :kaocha.testable/id v)]))
+                (into {::version 1}
+                      (map (fn [[k v]]
+                             [k (group-by :kaocha.testable/id v)]))
                       profiling-results)]
             (spit f (binding [*print-length* nil
                               *print-level* nil
