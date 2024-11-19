@@ -1,6 +1,9 @@
 name: canary
 
-on: [push, pull_request]
+on:
+  push:
+    - main
+  pull_request:
 
 jobs:
 
