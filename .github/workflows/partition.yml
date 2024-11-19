@@ -67,7 +67,6 @@ jobs:
           set -x
           cat kaocha-profiling.edn
       - name: Share profiling results with tests
-        if: steps.profiling.outputs.cache-matched-key
         uses: actions/upload-artifact@v4
         with:
           name: kaocha-profiling
