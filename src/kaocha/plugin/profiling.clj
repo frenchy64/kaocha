@@ -39,7 +39,9 @@
     (conj opts
           [nil "--[no-]profiling"      "Show slowest tests of each type with timing information."]
           [nil "--profiling-count NUM" "Show this many slow tests of each kind in profile results."
-           :parse-fn #(Integer/parseInt %)]))
+           :parse-fn #(Integer/parseInt %)]
+          [nil "--read-profiling-files FILENAMES" "Read prior profiling results."]
+          [nil "--write-profiling-file FILENAME" "Write profiling results to a file."]))
 
   (config [{:kaocha/keys [cli-options] :as config}]
     (assoc config
@@ -50,11 +52,15 @@
     (when (::profiling? result)
       (let [tests     (->> result
                            testable/test-seq
-                           (remove ::testable/load-error)
-                           (remove ::testable/skip))
+                           (remove ::testable/load-error))
             types     (group-by :kaocha.testable/type tests)
             total-dur (::duration result)
             limit     (::count result)]
+        (when-some [f (get-in testable/*config* [:kaocha/cli-options :profiling-file])]
+          (spit f (binding [*print-length* nil
+                            *print-level* nil
+                            *print-namespace-maps* false]
+                    (pr-str tests))))
         (->> (for [[type tests] types
                    :when        type
                    :let         [slowest (take limit (reverse (sort-by ::duration tests)))

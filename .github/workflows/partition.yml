@@ -1,0 +1,125 @@
+name: Test partitioned builds
+
+on:
+  push:
+    - main
+  pull_request:
+
+env:
+  # bump to purge caches
+  ACTIONS_CACHE_VERSION: v1
+  CLOJURE_CACHE_PATHS: |
+    ~/.m2/repository
+    ~/.gitlibs
+    ~/.deps.clj
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout deps file
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: deps.edn
+          sparse-checkout-cone-mode: false
+      - name: Check if we need to cache Clojure dependencies
+        id: cache-check
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.CLOJURE_CACHE_PATHS }}
+          key: cljdeps-${{ env.ACTIONS_CACHE_VERSION }}-${{ hashFiles('deps.edn') }}
+          lookup-only: true
+      - name: Checkout
+        if: steps.cache-check.cache-hit != 'true'
+        uses: actions/checkout@v4
+      - name: Prepare java
+        if: steps.cache-check.cache-hit != 'true'
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+      - name: Install clojure tools
+        if: steps.cache-check.cache-hit != 'true'
+        uses: DeLaGuardo/setup-clojure@13.0
+        with:
+          cli: latest
+      - name: Save Clojure dependencies
+        id: cache-check
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.CLOJURE_CACHE_PATHS }}
+          key: ${{ steps.cache-check.outputs.cache-primary-key }}
+      - name: Profiling Cache
+        id: profiling
+        uses: actions/cache/restore@v4
+        with:
+          path: kaocha-profiling.edn
+          key: force-cache-miss-profiling-${{ env.ACTIONS_CACHE_VERSION }}-${{ github.ref }}-${{ github.sha }}-${{ github.run_number }}-${{ github.run_attempt }}
+          restore-keys: |
+            profiling-${{ env.ACTIONS_CACHE_VERSION }}-${{ github.ref }}-${{ github.sha }}-
+            profiling-${{ env.ACTIONS_CACHE_VERSION }}-${{ github.ref }}-
+            profiling-${{ env.ACTIONS_CACHE_VERSION }}-
+      - name: Ensure profiling file exists
+        run: |
+          if [ ! -f kaocha-profiling.edn ]; then
+            echo '{}' > kaocha-profiling.edn
+          fi
+          cat kaocha-profiling.edn
+      - name: Share profiling results with tests
+        if: steps.profiling.outputs.cache-matched-key
+        uses: actions/upload-artifact@v4
+        with:
+          name: kaocha-profiling
+          path: kaocha-profiling.edn
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: setup
+    strategy:
+      matrix:
+        id: [0,1,2,3,4]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.CLOJURE_CACHE_PATHS }}
+          key: cljdeps-${{ env.ACTIONS_CACHE_VERSION }}-${{ hashFiles('deps.edn') }}
+          fail-on-cache-miss: true
+      - name: Download profiling results
+        uses: actions/download-artifact@v4
+        with:
+          name: kaocha-profiling
+          path: kaocha-profiling.edn
+      - name: Ensure profiling file exists
+        run: cat kaocha-profiling.edn
+      - name: Run tests
+        run: ./bin/kaocha --read-profiling-file kaocha-profiling.edn --write-profiling-file current-kaocha-profiling-${{ strategy.job-index }}.edn --partition-index ${{ strategy.job-index }} --partitions ${{ strategy.job-total }} --partition-strategy :test
+      - name: Upload profiling results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: current-kaocha-profiling
+          path: current-kaocha-profiling-${{ strategy.job-index }}.edn
+  result:
+    timeout-minutes: 5
+    # TODO fail if test fails
+    if: always()
+    runs-on: ubuntu-latest
+    needs: test
+      - name: Download test timings
+        uses: actions/download-artifact@v4
+        with:
+          pattern: current-kaocha-profiling-*.edn
+          merge-multiple: true
+          path: target/test-results
+      - name: Combine results
+        run: |
+          for i in current-kaocha-profiling-*.edn; do cat $i >> kaocha-profiling.edn; done
+          cat kaocha-profiling.edn
+      - name: Update Profiling Cache
+        id: profiling
+        uses: actions/cache/save@v4
+        with:
+          path: kaocha-profiling.edn
+          key: profiling-${{ env.ACTIONS_CACHE_VERSION }}-${{ github.ref }}-${{ github.sha }}-${{ github.run_number }}-${{ github.run_attempt }}
