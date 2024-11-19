@@ -38,10 +38,12 @@
   (prn "read-profiling-file" cli-options)
   (when-some [f (:read-profiling-file cli-options)]
     (prn "read-profiling-file" f)
-    (let [forms (file->forms f)]
-      (assert (every? #(= 1 (::version %)) forms))
-      (doto (apply merge-with #(merge-with into %1 %2) (map #(dissoc % ::version) forms))
-        prn))))
+    (when (-> f io/file .exists)
+      (prn "exists" f)
+      (let [forms (file->forms f)]
+        (assert (every? #(= 1 (::version %)) forms))
+        (doto (apply merge-with #(merge-with into %1 %2) (map :results forms))
+          prn)))))
 
 (defplugin kaocha.plugin/profiling
   (pre-run [test-plan]
@@ -87,10 +89,11 @@
                                                             :kaocha.testable/id])))
                                 tests))
                 profiling-results
-                (into {::version 1}
-                      (map (fn [[k v]]
-                             [k (group-by :kaocha.testable/id v)]))
-                      profiling-results)]
+                {::version 1
+                 :kaocha/cli-options (:kaocha/cli-options result)
+                 :results (mapv (fn [[k v]]
+                                  [k (group-by :kaocha.testable/id v)])
+                                profiling-results)}]
             (spit f (binding [*print-length* nil
                               *print-level* nil
                               *print-namespace-maps* false]

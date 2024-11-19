@@ -163,21 +163,21 @@
 ;;perhaps profiling plugin could assoc prior results into the actual test-plan
 (defn test-weights [{:kaocha.plugin.profiling/keys [prior-profiling] :as test-plan}
                     enabled-tests]
-  (assert prior-profiling "Must provide profiling results via --read-profiling-file with :kaocha.plugin/profiling plugin.")
-  (prn prior-profiling)
-  (let [var->duration (not-empty
-                        (into {} (map (fn [[k v]]
-                                        (assert (= 1 (count v)) (str "Multiple results for " (pr-str k) ": " (pr-str v)))
-                                        (let [weight (-> v first :kaocha.plugin.profiling/duration)]
-                                          (assert (nat-int? weight) (pr-str weight))
-                                          [k weight])))
-                              (:kaocha.type/var prior-profiling)))
-        average-duration (when var->duration
-                           (/ (apply + (vals var->duration)) (count var->duration)))
-        default-duration (or average-duration 1)]
-    (mapv (fn [{:keys [id path]}]
-            (var->duration id default-duration))
-          enabled-tests)))
+  (if-not prior-profiling
+    (println "Should provide profiling results via --read-profiling-file with :kaocha.plugin/profiling plugin, none found.")
+    (let [var->duration (not-empty
+                          (into {} (map (fn [[k v]]
+                                          (assert (= 1 (count v)) (str "Multiple results for " (pr-str k) ": " (pr-str v)))
+                                          (let [weight (-> v first :kaocha.plugin.profiling/duration)]
+                                            (assert (nat-int? weight) (pr-str weight))
+                                            [k weight])))
+                                (:kaocha.type/var prior-profiling)))
+          average-duration (when var->duration
+                             (/ (apply + (vals var->duration)) (count var->duration)))
+          default-duration (or average-duration 1)]
+      (mapv (fn [{:keys [id path]}]
+              (get var->duration id default-duration))
+            enabled-tests))))
 
 (defn partition-test-plan-by-test [test-plan {:keys [partition-strategy partition-index partitions] :as partition-conf}]
   (prn "partition-suite" partition-conf)
@@ -248,10 +248,16 @@
             [nil  "--partitions POS-INT"         "The number of partitions to divide the test suite into."
              :parse-fn parse-int]
             [nil  "--partition-strategy STRING"  "Approach to partition tests by."
-             :parse-fn parse])))
+             :parse-fn parse]
+            [nil  "--target-partition-minutes NUMBER"  "Target number of minutes in which to run all tests. Use to partition future runs."
+             :parse-fn parse-int]
+            [nil  "--max-partitions NUMBER"  "Maximum number of partitions to use in order meet --partition-target-minutes. Default: 10"
+             :parse-fn parse-int])))
 
   (config [config]
-    (let [{:keys [skip focus skip-meta focus-meta partitions partition-index partition-strategy]} (:kaocha/cli-options config)
+    (let [{:keys [skip focus skip-meta focus-meta partitions partition-index partition-strategy
+                  target-partition-minutes max-partitions]}
+          (:kaocha/cli-options config)
           choose-partition (when (or partition-index partitions)
                              (fn [config]
                                ;;TODO assert at parse time
@@ -266,9 +272,12 @@
                                  (throw (ex-info "--partition-index must be non-negative and less than --partitions"
                                                  {})))
                                ;;TODO group at parse time?
-                               (assoc config :kaocha.filter/partition {:partition-strategy (or partition-strategy :suite)
-                                                                       :partition-index partition-index
-                                                                       :partitions partitions})))]
+                               (assoc config :kaocha.filter/partition
+                                      {:partition-strategy (or partition-strategy :suite)
+                                       :partition-index partition-index
+                                       :partitions partitions
+                                       :target-partition-minutes target-partition-minutes
+                                       :max-partitions (or max-partitions 10)})))]
       (cond-> config
         (seq skip)       (assoc :kaocha.filter/skip skip)
         (seq focus)      (assoc :kaocha.filter/focus focus)
