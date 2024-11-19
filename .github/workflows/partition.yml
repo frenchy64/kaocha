@@ -45,6 +45,9 @@ jobs:
         uses: DeLaGuardo/setup-clojure@13.0
         with:
           cli: latest
+      - name: Download Clojure deps
+        if: steps.cache-check.cache-hit != 'true'
+        run: ./bin/kaocha --version
       - name: Save Clojure dependencies
         uses: actions/cache/save@v4
         with:
