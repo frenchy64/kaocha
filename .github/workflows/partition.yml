@@ -41,6 +41,7 @@ jobs:
           cli: latest
       - name: Download Clojure deps
         if: steps.cache-check.cache-hit != 'true'
+        working-directory: 
         run: ./bin/kaocha --version
       - name: Save Clojure dependencies
         if: steps.cache-check.cache-hit != 'true'
@@ -93,7 +94,7 @@ jobs:
       - name: Ensure profiling file exists
         run: cat kaocha-profiling.edn
       - name: Run tests
-        run: ./bin/kaocha --read-profiling-file kaocha-profiling.edn --write-profiling-file current-kaocha-profiling-${{ strategy.job-index }}.edn --partition-index ${{ strategy.job-index }} --partitions ${{ strategy.job-total }} --partition-strategy :test
+        run: ./bin/kaocha --read-profiling-file kaocha-profiling.edn --write-profiling-file current-kaocha-profiling-${{ strategy.job-index }}.edn --partition-index ${{ strategy.job-index }} --partitions ${{ strategy.job-total }} --partition-strategy :test-time
       - name: Upload profiling results
         if: always()
         uses: actions/upload-artifact@v4
@@ -115,6 +116,7 @@ jobs:
       - name: Combine results
         run: |
           rm -f kaocha-profiling.edn
+          ls current-kaocha-profiling-*.edn
           for i in current-kaocha-profiling-*.edn; do cat $i >> kaocha-profiling.edn; done
           cat kaocha-profiling.edn
       - name: Update Profiling Cache
