@@ -173,9 +173,10 @@
                                           [k weight])))
                               (:kaocha.type/var prior-profiling)))
         average-duration (when var->duration
-                           (/ (apply + (vals var->duration)) (count var->duration)))]
+                           (/ (apply + (vals var->duration)) (count var->duration)))
+        default-duration (or average-duration 1)]
     (mapv (fn [{:keys [id path]}]
-            (var->duration id average-duration))
+            (var->duration id default-duration))
           enabled-tests)))
 
 (defn partition-test-plan-by-test [test-plan {:keys [partition-strategy partition-index partitions] :as partition-conf}]
