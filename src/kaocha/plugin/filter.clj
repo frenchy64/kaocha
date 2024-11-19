@@ -101,28 +101,33 @@
       testable)))
 
 (defn partition-into
-  ([npartitions coll] (partition-into npartitions coll (into [] (repeat (count coll) 1))))
+  "Partition collection into npartitions partitions. Will attempt
+  to create equally weighted partitions according to weights (weights
+  defaults to 1 for all elements). Partitions are reproducible but
+  the order of items in coll is not preserved."
+  ([npartitions coll] (partition-into npartitions coll nil))
   ([npartitions coll weights]
    {:pre [(pos-int? npartitions)
           (vector? coll)
-          (vector? weights)
-          (= (count coll) (count weights))]}
-   (let [heaviest (reduce-kv (fn [m k v]
+          (or (nil? weights)
+              (vector? weights))]}
+   (let [weights (or weights (into [] (repeat (count coll) 1)))
+         _ (assert (= (count coll) (count weights)))
+         heaviest (reduce-kv (fn [m k v]
                                (update m v (fnil conj []) k))
                              (sorted-map-by (comp - compare)) weights)
-         total-weight (apply + weights)
-         target-partition-weight (/ total-weight npartitions)
+         ;; allocate largest weighing remaining element to the smallest weighing partition (left-most if tied)
          partitioned (reduce (fn [acc idx]
                                (let [idx-weight (weights idx)
                                      smallest-partition (apply min-key :weight
-                                                               ;; maintain order if clashes
-                                                               (reverse acc))]
+                                                               ;; maintain order for equal weights
+                                                               (rseq acc))]
                                  (update acc (:partition-idx smallest-partition)
                                          (fn [p]
                                            (-> p
                                                (update :partition-indices conj idx)
                                                (update :partition conj (nth coll idx))
-                                               (update :weight + idx-weight))))))
+                                               (update :weight +' idx-weight))))))
                              (mapv #(do {:partition-idx %
                                          :partition-indices []
                                          :partition []
@@ -154,10 +159,27 @@
                    suites))
     suites))
 
+;;perhaps profiling plugin could assoc prior results into the actual test-plan
+(defn test-weights [{:kaocha.plugin.profiling/keys [prior-profiling] :as test-plan}
+                    enabled-tests]
+  (assert prior-profiling "Must provide profiling results via --read-profiling-file with :kaocha.plugin/profiling plugin.")
+  (let [var->duration (not-empty
+                        (into {} (map (fn [[k v]]
+                                        (assert (= 1 (count v)) (str "Multiple results for " (pr-str k) ": " (pr-str v)))
+                                        (let [weight (-> v first :kaocha.plugin.profiling/duration)]
+                                          (assert (nat-int? weight) (pr-str weight))
+                                          [k weight])))
+                              (:kaocha.type/var prior-profiling)))
+        average-duration (when var->duration
+                           (/ (apply + (keys var->duration)) (count var->duration)))]
+    (mapv (fn [{:keys [id path]}]
+            (var->duration id average-duration))
+          enabled-tests)))
+
 (defn partition-test-plan-by-test [test-plan {:keys [partition-strategy partition-index partitions] :as partition-conf}]
   (prn "partition-suite" partition-conf)
   (case partition-strategy
-    (:test :test-time)
+    (:var :var-time)
     (let [config testable/*config*
           randomly-randomized? (and (::randomize/randomized test-plan)
                                     (::randomize/randomized-seed? config))
@@ -180,13 +202,18 @@
                                          tests)
                                    (cond-> []
                                      (and (map? testable) (not (::testable/skip testable)))
-                                     (conj path)))))
+                                     ;; TODO is this always a var test?
+                                     (conj {:path path :id (doto (:kaocha.testable/id testable)
+                                                             assert)})))))
           enabled-tests (enabled-test-paths test-plan [])
           _ (prn "enabled-tests" enabled-tests)
-          tests-to-skip (nth (partition-into partitions enabled-tests)
+          tests-to-skip (nth (partition-into partitions enabled-tests
+                                             (case partition-strategy
+                                               :test-time (test-weights test-plan enabled-tests)
+                                               nil))
                              partition-index)
           _ (prn "tests-to-skip" tests-to-skip)
-          test-plan (reduce (fn [test-plan path]
+          test-plan (reduce (fn [test-plan {:keys [path]}]
                               (assoc-in test-plan (conj path :kaocha.testable/skip) true))
                             test-plan tests-to-skip)]
       ;; re-randomize the current partition

@@ -33,7 +33,7 @@
             partitions 5]
         (println (format "Partitions for %s: %s" repo-name partitions))
         (doseq [partition-index (range partitions)
-                :let [cmd (format "%s --partition-index %s --partitions %s --partition-strategy :test"
+                :let [cmd (format "%s --partition-index %s --partitions %s --partition-strategy :var"
                                   command partition-index partitions)]]
           (println cmd)
           (shell {:dir repo-dir} cmd))))))
