@@ -107,6 +107,7 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     needs: test
+    steps:
       - name: Download test timings
         uses: actions/download-artifact@v4
         with:
