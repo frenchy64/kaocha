@@ -112,6 +112,7 @@
           (or (nil? weights)
               (vector? weights))]}
    (let [weights (or weights (into [] (repeat (count coll) 1)))
+         _ (prn "weights" weights)
          _ (assert (= (count coll) (count weights)))
          heaviest (reduce-kv (fn [m k v]
                                (update m v (fnil conj []) k))
@@ -209,8 +210,8 @@
           _ (prn "enabled-tests" enabled-tests)
           tests-to-skip (nth (partition-into partitions enabled-tests
                                              (case partition-strategy
-                                               :test-time (test-weights test-plan enabled-tests)
-                                               nil))
+                                               :var-time (test-weights test-plan enabled-tests)
+                                               :var nil))
                              partition-index)
           _ (prn "tests-to-skip" tests-to-skip)
           test-plan (reduce (fn [test-plan {:keys [path]}]

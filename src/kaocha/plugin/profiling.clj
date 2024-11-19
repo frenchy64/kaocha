@@ -31,15 +31,16 @@
         (let [form (edn/read {:eof eof} in)]
           (if (identical? eof form)
             forms
-            (recur (if (sequential? form)
-                     (into forms form)
-                     (conj forms form)))))))))
+            (recur ((if (sequential? form) into conj)
+                    forms form))))))))
 
 (defn read-profiling-file [{:kaocha/keys [cli-options] :as config}]
+  (prn "read-profiling-file" cli-options)
   (when-some [f (:read-profiling-file cli-options)]
+    (prn "read-profiling-file" f)
     (let [forms (file->forms f)]
       (assert (every? #(= 1 (::version %)) forms))
-      (doto (apply merge-with #(merge-with into %1 %2) {} (dissoc forms ::version))
+      (doto (apply merge-with #(merge-with into %1 %2) (map #(dissoc % ::version) forms))
         prn))))
 
 (defplugin kaocha.plugin/profiling
