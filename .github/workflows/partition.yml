@@ -118,17 +118,20 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install clojure tools
+        if: steps.cache-check.outputs.cache-hit != 'true'
+        uses: DeLaGuardo/setup-clojure@13.0
+        with:
+          bb: latest
       - name: Download test timings
         uses: actions/download-artifact@v4
         with:
           pattern: current-kaocha-profiling-*.edn
           merge-multiple: true
       - name: Combine results
-        run: |
-          rm -f kaocha-profiling.edn
-          ls current-kaocha-profiling-*.edn
-          for i in current-kaocha-profiling-*.edn; do cat $i >> kaocha-profiling.edn; done
-          cat kaocha-profiling.edn
+        run: ./src/kaocha/plugin/profiling/combine_results.clj '{:result-files ["current-kaocha-profiling-*.edn"] :output-file "kaocha-profiling.edn"}'
       - name: Update Profiling Cache
         id: profiling
         uses: actions/cache/save@v4
