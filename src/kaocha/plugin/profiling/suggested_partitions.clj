@@ -7,6 +7,7 @@
             [babashka.fs :as fs]))
 
 (defn suggest-partitions [{:keys [input-file default-partitions max-partitions]}]
+  {:post [(pos-int? %)]}
   (assert input-file)
   (assert default-partitions)
   (assert max-partitions)

@@ -28,13 +28,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Check if we need to cache Clojure dependencies
+      - name: Restore Clojure dependencies
         id: cache-check
-        uses: actions/cache/restore@v4
+        uses: actions/cache@v4
         with:
           path: ${{ env.CLOJURE_CACHE_PATHS }}
-          key: cljdeps-${{ env.ACTIONS_CACHE_VERSION }}-${{ hashFiles('deps.edn') }}
-          lookup-only: true
+          key: cljdeps-${{ env.ACTIONS_CACHE_VERSION }}-${{ hashFiles('deps.edn', 'bb.edn') }}
       - name: Prepare java
         if: steps.cache-check.outputs.cache-hit != 'true'
         uses: actions/setup-java@v4
@@ -50,12 +49,6 @@ jobs:
         if: steps.cache-check.outputs.cache-hit != 'true'
         working-directory: 
         run: ./bin/kaocha --version
-      - name: Save Clojure dependencies
-        if: steps.cache-check.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: ${{ env.CLOJURE_CACHE_PATHS }}
-          key: ${{ steps.cache-check.outputs.cache-primary-key }}
       - name: Profiling Cache
         id: profiling
         uses: actions/cache/restore@v4
@@ -102,7 +95,7 @@ jobs:
       - uses: actions/cache/restore@v4
         with:
           path: ${{ env.CLOJURE_CACHE_PATHS }}
-          key: cljdeps-${{ env.ACTIONS_CACHE_VERSION }}-${{ hashFiles('deps.edn') }}
+          key: cljdeps-${{ env.ACTIONS_CACHE_VERSION }}-${{ hashFiles('deps.edn', 'bb.edn') }}
           fail-on-cache-miss: true
       - name: Download profiling results
         uses: actions/download-artifact@v4
@@ -118,7 +111,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ${{ env.CLOJURE_CACHE_PATHS }}
-          key: cljdeps-${{ env.ACTIONS_CACHE_VERSION }}-${{ hashFiles('deps.edn') }}
+          key: cljdeps-${{ env.ACTIONS_CACHE_VERSION }}-${{ hashFiles('deps.edn', 'bb.edn') }}
           fail-on-cache-miss: true
       - name: Run tests
         run: ./bin/kaocha --read-profiling-file kaocha-profiling.edn --write-profiling-file current-kaocha-profiling-${{ strategy.job-index }}.edn --partition-index ${{ strategy.job-index }} --partitions ${{ strategy.job-total }} --partition-strategy :test-time --target-partition-minutes ${{ env.TARGET_PARTITION_MINUTES }} --max-partitions ${{ env.MAX_PARTITIONS }}
