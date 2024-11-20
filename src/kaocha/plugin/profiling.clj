@@ -24,25 +24,15 @@
                               (Instant/now)
                               ChronoUnit/NANOS))))
 
-(defn- file->forms [f]
-  (with-open [in (PushbackReader. (io/reader f))]
-    (let [eof (Object.)]
-      (loop [forms []]
-        (let [form (edn/read {:eof eof} in)]
-          (if (identical? eof form)
-            forms
-            (recur ((if (sequential? form) into conj)
-                    forms form))))))))
-
 (defn read-profiling-file [{:kaocha/keys [cli-options] :as config}]
   (prn "read-profiling-file" cli-options)
   (when-some [f (:read-profiling-file cli-options)]
     (prn "read-profiling-file" f)
     (when (-> f io/file .exists)
       (prn "exists" f)
-      (let [forms (file->forms f)]
-        (assert (every? #(= 1 (::version %)) forms))
-        (doto (apply merge-with #(merge-with into %1 %2) (map :results forms))
+      (let [form (edn/read-string (slurp f))]
+        (assert (= 1 (::version form)) (pr-str form))
+        (doto (apply merge-with #(merge-with into %1 %2) (:results form))
           prn)))))
 
 (defplugin kaocha.plugin/profiling
