@@ -31,7 +31,8 @@
     (when (-> f io/file .exists)
       (prn "exists" f)
       (let [form (edn/read-string (slurp f))]
-        (assert (= 1 (::version form)) (pr-str form))
+        (when (seq form)
+          (assert (= 1 (::version form)) (pr-str form)))
         (doto (apply merge-with #(merge-with into %1 %2) (:results form))
           prn)))))
 
