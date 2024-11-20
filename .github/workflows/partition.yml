@@ -95,7 +95,7 @@ jobs:
     needs: setup
     strategy:
       matrix:
-        id: ${{ fromJSON(needs.setup.outputs.test-partitions }}
+        id: ${{ fromJSON(needs.setup.outputs.test-partitions) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
