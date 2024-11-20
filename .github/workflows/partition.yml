@@ -76,7 +76,7 @@ jobs:
       - name: Setup matrix partitions
         id: test-partitions
         run: |
-          ./src/kaocha/plugin/profiling/suggested_partitions.clj '{:input-file "kaocha-profiling.edn" :default-partitions ${{ env.DEFAULT_PARTITIONS }}l :max-partitions ${{ env.MAX_PARTITIONS }} }' | bb -e '(-> *input* range json/encode (as-> $ (spit (System/getenv "GITHUB_OUTPUT") (let [delim (random-uuid)] (doto (format "test-partitions<<%s\n%s\n%s\n" delim $ delim) println)) :append true)))'
+          ./src/kaocha/plugin/profiling/suggested_partitions.clj '{:input-file "kaocha-profiling.edn" :default-partitions ${{ env.DEFAULT_PARTITIONS }} :max-partitions ${{ env.MAX_PARTITIONS }} }' | bb -e '(-> *input* range json/encode (as-> $ (spit (System/getenv "GITHUB_OUTPUT") (let [delim (random-uuid)] (doto (format "test-partitions<<%s\n%s\n%s\n" delim $ delim) println)) :append true)))'
       - name: Share profiling results with tests
         uses: actions/upload-artifact@v4
         with:
