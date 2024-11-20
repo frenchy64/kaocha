@@ -9,16 +9,22 @@ on:
 env:
   # bump to purge caches
   ACTIONS_CACHE_VERSION: v1
+  BB_VERSION: v1.12.195
   CLOJURE_CLI_VERSION: 1.12.0.1479
   CLOJURE_CACHE_PATHS: |
     ~/.m2/repository
     ~/.gitlibs
     ~/.deps.clj
+  TARGET_PARTITION_MINUTES: 10
+  MAX_PARTITIONS: 10
+  DEFAULT_PARTITIONS: 5
 
 jobs:
   setup:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      test-partitions: ${{ steps.test-partitons.outputs.test-partitions }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -63,10 +69,21 @@ jobs:
       - name: Ensure profiling file exists
         run: |
           if [ ! -f kaocha-profiling.edn ]; then
-            touch kaocha-profiling.edn
+            echo '{}' > kaocha-profiling.edn
           fi
           set -x
           cat kaocha-profiling.edn
+      - name: Install clojure tools
+        uses: DeLaGuardo/setup-clojure@13.0
+        with:
+          bb: ${{ env.BB_VERSION }}
+
+      # echo 1 | GITHUB_OUTPUT=gh bb -e '(-> *input* range json/encode (as-> $ (spit (System/getenv "GITHUB_OUTPUT") (let [delim (random-uuid)] (doto (format "test-partitions<<%s\n%s\n%s\n" delim $ delim) println)) :append true)))'
+      # cat gh
+      - name: Setup matrix partitions
+        id: test-partitions
+        run: |
+          ./src/kaocha/plugin/profiling/suggested_partitions.clj '{:input-file "kaocha-profiling.edn" :default-partitions ${{ env.DEFAULT_PARTITIONS }}l :max-partitions ${{ env.MAX_PARTITIONS }} }' | bb -e '(-> *input* range json/encode (as-> $ (spit (System/getenv "GITHUB_OUTPUT") (let [delim (random-uuid)] (doto (format "test-partitions<<%s\n%s\n%s\n" delim $ delim) println)) :append true)))'
       - name: Share profiling results with tests
         uses: actions/upload-artifact@v4
         with:
@@ -78,7 +95,7 @@ jobs:
     needs: setup
     strategy:
       matrix:
-        id: [0,1,2,3,4,5,6,7,8,9]
+        id: ${{ fromJSON(needs.setup.outputs.test-partitions }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -104,7 +121,7 @@ jobs:
           key: cljdeps-${{ env.ACTIONS_CACHE_VERSION }}-${{ hashFiles('deps.edn') }}
           fail-on-cache-miss: true
       - name: Run tests
-        run: ./bin/kaocha --read-profiling-file kaocha-profiling.edn --write-profiling-file current-kaocha-profiling-${{ strategy.job-index }}.edn --partition-index ${{ strategy.job-index }} --partitions ${{ strategy.job-total }} --partition-strategy :test-time
+        run: ./bin/kaocha --read-profiling-file kaocha-profiling.edn --write-profiling-file current-kaocha-profiling-${{ strategy.job-index }}.edn --partition-index ${{ strategy.job-index }} --partitions ${{ strategy.job-total }} --partition-strategy :test-time --target-partition-minutes ${{ env.TARGET_PARTITION_MINUTES }} --max-partitions ${{ env.MAX_PARTITIONS }}
       - name: Upload profiling results
         if: always()
         uses: actions/upload-artifact@v4
@@ -124,7 +141,7 @@ jobs:
         if: steps.cache-check.outputs.cache-hit != 'true'
         uses: DeLaGuardo/setup-clojure@13.0
         with:
-          bb: latest
+          bb: ${{ env.BB_VERSION }}
       - name: Download test timings
         uses: actions/download-artifact@v4
         with:

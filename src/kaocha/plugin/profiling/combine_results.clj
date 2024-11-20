@@ -33,7 +33,7 @@
 
 (defn -main [& args]
   (try (assert (= 1 (count args)) (pr-str args))
-       (let [{:keys [result-files output-file]} ((requiring-resolve 'clojure.edn/read-string) (first args))]
+       (let [{:keys [result-files output-file]} (edn/read-string (first args))]
          (spit output-file (binding [*print-length* nil
                                      *print-level* nil
                                      *print-namespace-maps* false]
