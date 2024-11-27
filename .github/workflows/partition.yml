@@ -87,6 +87,7 @@ jobs:
     timeout-minutes: 10
     needs: setup
     strategy:
+      fail-fast: false
       matrix:
         id: ${{ fromJSON(needs.setup.outputs.test-partitions) }}
     steps:

@@ -38,8 +38,9 @@ Feature: Profiling tests
                  (println "Bad slow-test duration:" (duration slow-test)))
              (println "fast-test was faster than slow-test")))
       """
-    When I run `clojure test_profiling.clj || echo 'command failed'" `
-    Then the output should contain:
+    When I run `clojure test_profiling.clj`
+    Then the exit-code should be 0
+    And the output should contain:
       """
       fast-test was faster than slow-test
       """
