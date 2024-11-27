@@ -38,7 +38,7 @@ Feature: Profiling tests
                  (println "Bad slow-test duration:" (duration slow-test)))
              (println "fast-test was faster than slow-test")))
       """
-    When I run `bb -f test_profiling.clj || echo 'command failed'" `
+    When I run `clojure test_profiling.clj || echo 'command failed'" `
     Then the output should contain:
       """
       fast-test was faster than slow-test
