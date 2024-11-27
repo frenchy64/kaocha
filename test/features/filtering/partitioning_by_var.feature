@@ -5,47 +5,53 @@ Feature: Partitioning tests by var for load balancing
   machine it is running on, it can automatically run the tests for the current machine.
 
   Background: A simple test suite
-    Given a file named "test/my/project/sample_test1.clj" with:
+    Given a file named "test/my/project/a_test.clj" with:
       """clojure
-      (ns my.project.sample-test1
+      (ns my.project.a-test
         (:require [clojure.test :refer :all]))
 
-      (deftest -0th-test
+      (deftest test0
         (is (= 1 1)))
 
-      (deftest -1th-test
+      (deftest test1
         (is (= 2 2)))
       """
-    And a file named "test/my/project/sample_test2.clj" with:
+    Given a file named "test/my/project/b_test.clj" with:
       """clojure
-      (ns my.project.sample-test2
+      (ns my.project.b-test
         (:require [clojure.test :refer :all]))
 
-      (deftest -3th-test
-        (is (= 1 1)))
+      (deftest test3
+        (is (= 3 3)))
 
-      (deftest -4th-test
-        (is (= 2 2)))
+      (deftest test4
+        (is (= 4 4)))
       """
 
   Scenario: Running tests on the first machine of two.
-    When I run `bin/kaocha --partition-index 0 --partitions 2 --partition-strategy :var --reporter documentation`
+    When I run `bin/kaocha --seed 0 --partition-index 0 --partitions 2 --partition-strategy :var --reporter documentation`
     Then the output should contain:
       """
       --- unit (clojure.test) ---------------------------
-      my.project.sample-test
-        some-test
+      my.project.a-test
+        test1
 
-      1 tests, 1 assertions, 0 failures.
+      my.project.b-test
+        test4
+
+      2 tests, 2 assertions, 0 failures.
       """
 
   Scenario: Running tests on the second machine of two.
-    When I run `bin/kaocha --partition-index 1 --partitions 2  --reporter documentation`
+    When I run `bin/kaocha --seed 0 --partition-index 1 --partitions 2 --partition-strategy :var --reporter documentation`
     Then the output should contain:
       """
       --- unit (clojure.test) ---------------------------
-      my.project.sample-test
-        other-test
+      my.project.a-test
+        test0
 
-      1 tests, 1 assertions, 0 failures.
+      my.project.b-test
+        test3
+
+      2 tests, 2 assertions, 0 failures.
       """
