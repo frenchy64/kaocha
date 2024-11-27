@@ -41,7 +41,7 @@
                              (dissoc :config-file)
 
                              (::randomize/randomized results)
-                             (assoc :seed (::randomize/seed test-plan)))))
+                             (assoc :seed (::randomize/seed results)))))
                   (conj "--focus"
                         (str
                          "'" (cond-> id (= (first id) \:) (subs 1)) "'")))))))))
