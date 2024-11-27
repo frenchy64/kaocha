@@ -114,7 +114,7 @@ jobs:
           key: cljdeps-${{ env.ACTIONS_CACHE_VERSION }}-${{ hashFiles('deps.edn', 'bb.edn') }}
           fail-on-cache-miss: true
       - name: Run tests
-        run: ./bin/kaocha --read-profiling-file kaocha-profiling.edn --write-profiling-file current-kaocha-profiling-${{ strategy.job-index }}.edn --partition-index ${{ strategy.job-index }} --partitions ${{ strategy.job-total }} --partition-strategy :test-time --target-partition-minutes ${{ env.TARGET_PARTITION_MINUTES }} --max-partitions ${{ env.MAX_PARTITIONS }}
+        run: ./bin/kaocha --read-profiling-file kaocha-profiling.edn --write-profiling-file current-kaocha-profiling-${{ strategy.job-index }}.edn --partition-index ${{ strategy.job-index }} --partitions ${{ strategy.job-total }} --partition-strategy :var-time --target-partition-minutes ${{ env.TARGET_PARTITION_MINUTES }} --max-partitions ${{ env.MAX_PARTITIONS }}
       - name: Upload profiling results
         if: always()
         uses: actions/upload-artifact@v4

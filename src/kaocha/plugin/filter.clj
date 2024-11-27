@@ -242,8 +242,10 @@
              :parse-fn parse-int]
             [nil  "--partitions POS-INT"         "The number of partitions to divide the test suite into."
              :parse-fn parse-int]
-            [nil  "--partition-strategy STRING"  "Approach to partition tests by."
-             :parse-fn parse]
+            [nil  "--partition-strategy STRING"
+             "Approach to partition tests by. :suite by test suite, :var{-time} by var {timing}. Chooses fastest strategy by default."
+             :parse-fn (comp #(assert (#{:var :var-time :suite} %) (str "Bad --partition-strategy: " (pr-str %)))
+                             parse)]
             [nil  "--target-partition-minutes NUMBER"  "Target number of minutes in which to run all tests. Use to partition future runs."
              :parse-fn parse-int]
             [nil  "--max-partitions NUMBER"  "Maximum number of partitions to use in order meet --partition-target-minutes. Default: 10"
@@ -268,7 +270,9 @@
                                                  {})))
                                ;;TODO group at parse time?
                                (assoc config :kaocha.filter/partition
-                                      {:partition-strategy (or partition-strategy :suite)
+                                      {:partition-strategy (or partition-strategy
+                                                               ;;TODO choose fastest strategy based on test-plan and/or timings
+                                                               :var)
                                        :partition-index partition-index
                                        :partitions partitions
                                        :target-partition-minutes target-partition-minutes
