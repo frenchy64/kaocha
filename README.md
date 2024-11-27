@@ -61,6 +61,7 @@ There is also a [#kaocha](https://clojurians.slack.com/messages/CCY2V0U6A/convo/
 - [Configuration: Warnings](https://cljdoc.org/d/lambdaisland/kaocha/CURRENT/doc/configuration-warnings)
 - [Focusing based on metadata](https://cljdoc.org/d/lambdaisland/kaocha/CURRENT/doc/focusing-based-on-metadata)
 - [Focusing on specific tests](https://cljdoc.org/d/lambdaisland/kaocha/CURRENT/doc/focusing-on-specific-tests)
+- [Partitioning tests for load balancing](https://cljdoc.org/d/lambdaisland/kaocha/CURRENT/doc/partitioning-tests-for-load-balancing)
 - [Skipping based on metadata](https://cljdoc.org/d/lambdaisland/kaocha/CURRENT/doc/skipping-based-on-metadata)
 - [Skipping test based on ids](https://cljdoc.org/d/lambdaisland/kaocha/CURRENT/doc/skipping-test-based-on-ids)
 - [Marking tests as pending](https://cljdoc.org/d/lambdaisland/kaocha/CURRENT/doc/marking-tests-as-pending)
