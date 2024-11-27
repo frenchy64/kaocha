@@ -23,7 +23,7 @@ Feature: Partitioning tests for load balancing
       """
       --- unit (clojure.test) ---------------------------
       my.project.sample-test
-        other-test
+        some-test
 
       1 tests, 1 assertions, 0 failures.
       """

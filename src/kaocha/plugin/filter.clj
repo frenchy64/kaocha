@@ -244,7 +244,8 @@
              :parse-fn parse-int]
             [nil  "--partition-strategy STRING"
              "Approach to partition tests by. :suite by test suite, :var{-time} by var {timing}. Chooses fastest strategy by default."
-             :parse-fn (comp #(assert (#{:var :var-time :suite} %) (str "Bad --partition-strategy: " (pr-str %)))
+             :parse-fn (comp #(do (assert (#{:var :var-time :suite} %) (str "Bad --partition-strategy: " (pr-str %)))
+                                  %)
                              parse)]
             [nil  "--target-partition-minutes NUMBER"  "Target number of minutes in which to run all tests. Use to partition future runs."
              :parse-fn parse-int]
