@@ -210,16 +210,20 @@
                                                              :kaocha.filter/focus-meta #{:positive}}]
                                    :kaocha.filter/focus #{:positive}}))))
 
-(deftest partition-into-test
-  (is (= [["a"] ["b"] ["c"] ["d"]] (f/partition-into 4 ["a" "b" "c" "d"])))
-  (is (= [["a"] ["b"] ["c"] ["d"]] (f/partition-into 4 ["a" "b" "c" "d"]
-                                                     [2 1 1 1])))
-  (is (= [["a" "d"] ["b"] ["c"]] (f/partition-into 3 ["a" "b" "c" "d"]
-                                                   [1 1 1 1])))
-  (is (= [["a" "d"] ["b"] ["c"]] (f/partition-into 3 ["a" "b" "c" "d"]
-                                                     [1 1 1 1])))
-  (is (= [["b"] ["a" "d"] ["c"]] (f/partition-into 3 ["a" "b" "c" "d"]
-                                                   [1 2 1 1])))
-  (is (= [["a" "d"] ["b"] ["c"]] (f/partition-into 3 ["a" "b" "c" "d"])))
-  (is (= [["a"] ["b"] ["c"] ["d"] []] (f/partition-into 5 ["a" "b" "c" "d"])))
-  )
+(deftest weighted-partition-test
+  (is (= [["a"] ["b"] ["c"] ["d"]] (f/weighted-partition 4 ["a" "b" "c" "d"])))
+  (is (= [["a"] ["b"] ["c"] ["d"]] (f/weighted-partition 4 ["a" "b" "c" "d"] [2 1 1 1])))
+  (is (= [["a" "d"] ["b"] ["c"]] (f/weighted-partition 3 ["a" "b" "c" "d"] [1 1 1 1])))
+  (is (= [["a" "d"] ["b"] ["c"]] (f/weighted-partition 3 ["a" "b" "c" "d"] [1 1 1 1])))
+  (is (= [["b"] ["a" "d"] ["c"]] (f/weighted-partition 3 ["a" "b" "c" "d"] [1 2 1 1])))
+  (is (= [["a" "d"] ["b"] ["c"]] (f/weighted-partition 3 ["a" "b" "c" "d"])))
+  (is (= [["a"] ["b"] ["c"] ["d"] []] (f/weighted-partition 5 ["a" "b" "c" "d"]))))
+
+(deftest nth-weighted-partition-test
+  (is (= ["a"] (f/nth-weighted-partition 0 4 ["a" "b" "c" "d"])))
+  (is (= ["c"] (f/nth-weighted-partition 2 4 ["a" "b" "c" "d"] [2 1 1 1])))
+  (is (= ["a" "d"] (f/nth-weighted-partition 0 3 ["a" "b" "c" "d"] [1 1 1 1])))
+  (is (= ["a" "d"] (f/nth-weighted-partition 0 3 ["a" "b" "c" "d"] [1 1 1 1])))
+  (is (= ["a" "d"] (f/nth-weighted-partition 1 3 ["a" "b" "c" "d"] [1 2 1 1])))
+  (is (= ["a" "d"] (f/nth-weighted-partition 0 3 ["a" "b" "c" "d"])))
+  (is (= [] (f/nth-weighted-partition 4 5 ["a" "b" "c" "d"]))))

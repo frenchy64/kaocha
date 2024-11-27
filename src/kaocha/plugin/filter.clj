@@ -1,7 +1,6 @@
 (ns kaocha.plugin.filter
   (:require [kaocha.plugin :as plugin :refer [defplugin]]
             [kaocha.testable :as testable]
-            [kaocha.plugin.randomize :as randomize]
             [clojure.set :as set]
             [clojure.walk :as walk]
             [kaocha.output :as output]))
@@ -100,12 +99,12 @@
       :else
       testable)))
 
-(defn partition-into
+(defn weighted-partition
   "Partition collection into npartitions partitions. Will attempt
   to create equally weighted partitions according to weights (weights
   defaults to 1 for all elements). Partitions are reproducible but
   the order of items in coll is not preserved."
-  ([npartitions coll] (partition-into npartitions coll nil))
+  ([npartitions coll] (weighted-partition npartitions coll nil))
   ([npartitions coll weights]
    {:pre [(pos-int? npartitions)
           (vector? coll)
@@ -151,7 +150,7 @@
                                              (when-not (:kaocha.testable/skip suite)
                                                i)))
                                       suites)
-                 suites-for-this-partition (set (nth (partition-into partitions enabled-suites)
+                 suites-for-this-partition (set (nth (weighted-partition partitions enabled-suites)
                                                      partition-index))]
              (mapv (fn [suite]
                      (assoc suite :kaocha.testable/skip (not (suites-for-this-partition suite))))
@@ -160,7 +159,7 @@
 
 ;;perhaps profiling plugin could assoc prior results into the actual test-plan
 (defn test-weights [{:kaocha.plugin.profiling/keys [prior-profiling] :as test-plan}
-                    enabled-tests]
+                    enabled-test-ids]
   (if-not prior-profiling
     (println "Should provide profiling results via --read-profiling-file with :kaocha.plugin/profiling plugin, none found.")
     (let [var->duration (not-empty
@@ -173,51 +172,49 @@
           average-duration (when var->duration
                              (/ (apply + (vals var->duration)) (count var->duration)))
           default-duration (or average-duration 1)]
-      (mapv (fn [{:keys [id path]}]
+      (mapv (fn [id]
               (get var->duration id default-duration))
-            enabled-tests))))
+            enabled-test-ids))))
+
+(defn skip-tests [test-plan test-ids-to-skip]
+  {:pre [(set? test-ids-to-skip)]}
+  (if-some [tests (:kaocha.test-plan/tests test-plan)]
+    (assoc test-plan
+           :kaocha.test-plan/tests
+           (->> tests
+                (map #(-> %
+                          (cond->
+                            (test-ids-to-skip (:kaocha.testable/id %))
+                            (assoc :kaocha.testable/skip true))
+                          (skip-tests test-ids-to-skip)))))
+    test-plan))
+
+(defn enabled-tests [testable]
+  (if (::testable/skip testable)
+    []
+    (if-some [tests (:kaocha.test-plan/tests testable)]
+      (mapcat enabled-tests tests)
+      (cond-> []
+        (and (map? testable) (not (::testable/skip testable)) (:kaocha.testable/id testable))
+        (conj (:kaocha.testable/id testable))))))
+
+(defn nth-weighted-partition
+  ([partition-index npartitions coll]
+   (nth-weighted-partition partition-index npartitions coll nil))
+  ([partition-index npartitions coll weights]
+   (-> (weighted-partition npartitions coll weights)
+       (nth partition-index))))
 
 (defn partition-test-plan-by-test [test-plan {:keys [partition-strategy partition-index partitions] :as partition-conf}]
   (case partition-strategy
     (:var :var-time)
-    (let [randomly-randomized? (and (::randomize/randomized test-plan)
-                                    (let [b (::randomize/randomized-seed? test-plan)]
-                                      (assert (boolean? b))
-                                      b))
-          _ (when randomly-randomized?
-              (output/warn "Please either provide consistent --seed to all partitions or move :kaocha.plugin/filter before :kaocha.plugin/randomize"))
-          test-plan (cond-> test-plan
-                      randomly-randomized? randomize/straight-sort)
-          ;; make indexable
-          test-plan (walk/postwalk (fn [s]
-                                     (cond-> s
-                                       (sequential? s) vec))
-                                   test-plan)
-          enabled-test-paths (fn enabled-test-paths
-                               [testable path]
-                               (if (::testable/skip testable)
-                                 []
-                                 (if-some [tests (:kaocha.test-plan/tests testable)]
-                                   (into [] (comp (map-indexed #(enabled-test-paths %2 (conj path :kaocha.test-plan/tests %1)))
-                                                  cat)
-                                         tests)
-                                   (cond-> []
-                                     (and (map? testable) (not (::testable/skip testable)))
-                                     ;; TODO is this always a var test?
-                                     (conj {:path path :id (doto (:kaocha.testable/id testable)
-                                                             assert)})))))
-          enabled-tests (enabled-test-paths test-plan [])
-          tests-to-skip (nth (partition-into partitions enabled-tests
-                                             (case partition-strategy
-                                               :var-time (test-weights test-plan enabled-tests)
-                                               :var nil))
-                             partition-index)
-          test-plan (reduce (fn [test-plan {:keys [path]}]
-                              (assoc-in test-plan (conj path :kaocha.testable/skip) true))
-                            test-plan tests-to-skip)]
-      ;; re-randomize the current partition
-      (cond-> test-plan
-        randomly-randomized? randomize/randomize-test-plan))
+    (let [;; must be sorted!
+          enabled-ids (-> test-plan enabled-tests sort vec)
+          test-ids-to-skip (set (nth-weighted-partition partition-index partitions enabled-ids
+                                  (case partition-strategy
+                                    :var-time (test-weights test-plan enabled-ids)
+                                    :var nil)))]
+      (skip-tests test-plan test-ids-to-skip))
     test-plan))
 
 (defplugin kaocha.plugin/filter

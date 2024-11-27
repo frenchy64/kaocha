@@ -26,13 +26,6 @@
                 (map (partial rng-sort rng))))
     test-plan))
 
-(defn randomize-test-plan [test-plan]
-  (let [rng (rng (::seed test-plan))]
-    (assoc (->> test-plan
-                straight-sort
-                (rng-sort rng))
-           ::randomized true)))
-
 (defplugin kaocha.plugin/randomize
   (cli-options [opts]
     (conj opts
@@ -48,14 +41,16 @@
                             (when (some? randomize?)
                               {::randomize? randomize?}))]
       (if (::randomize? config)
-        (merge {::seed (or seed (rand-int Integer/MAX_VALUE))
-                ::randomized-seed? (not seed)}
-               config)
+        (merge {::seed (or seed (rand-int Integer/MAX_VALUE))} config)
         config)))
 
   (post-load [test-plan]
-    (cond-> test-plan
-      (::randomize? test-plan) randomize-test-plan))
+    (if (::randomize? test-plan)
+      (let [rng (rng (::seed test-plan))]
+        (->> test-plan
+             straight-sort
+             (rng-sort rng)))
+      test-plan))
 
   (post-run [test-plan]
     (if (and (::randomize? test-plan) (result/failed? test-plan))
