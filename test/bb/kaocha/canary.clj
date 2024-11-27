@@ -28,7 +28,7 @@
     (println "Testing " repo-name)
     (let [repo-dir (str temp-dir "/" repo-name)]
       (shell (format "git clone %s %s" (str github-clone-url "/" repo-name) repo-dir))
-      (let [command (format "clojure -Sdeps '{:aliases {:test-local {:override-deps {lambdaisland/kaocha {:local/root \"%s/\"}}}}}' -A:test:test-local -m kaocha.runner %s"
+      (let [command (format "clojure -Sdeps '{:aliases {:test-local {:override-deps {lambdaisland/kaocha {:local/root \"%s/\"}}}}}' -M:test:test-local -m kaocha.runner %s"
                             current-wd suite)
             partitions 5]
         (println (format "Partitions for %s: %s" repo-name partitions))
