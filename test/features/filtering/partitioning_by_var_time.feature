@@ -11,6 +11,7 @@ Feature: Partitioning tests by var time for load balancing
       """ edn
       #kaocha/v1
       {:plugins [:profiling]
+       :color? false
        :reporter kaocha.report/documentation}
       """
     Given a file named "test/my/project/a_test.clj" with:
@@ -44,8 +45,10 @@ Feature: Partitioning tests by var time for load balancing
       --- unit (clojure.test) ---------------------------
       my.project.a-test
         test0
+
       my.project.b-test
         test3
+
       2 tests, 2 assertions, 0 failures.
       """
 
@@ -56,7 +59,9 @@ Feature: Partitioning tests by var time for load balancing
       --- unit (clojure.test) ---------------------------
       my.project.a-test
         test1
+
       my.project.b-test
         test4
+
       2 tests, 2 assertions, 0 failures.
       """
