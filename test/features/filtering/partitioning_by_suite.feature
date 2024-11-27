@@ -8,47 +8,71 @@ Feature: Partitioning tests by namespace for load balancing
     Given a file named "tests.edn" with:
       """edn
       #kaocha/v1
-      {:tests [{:id :a :test-paths ["test/a"]}
-               {:id :b :test-paths ["test/b"]}]
+      {:tests [{:id :asuite :test-paths ["test/asuite"]}
+               {:id :bsuite :test-paths ["test/bsuite"]}]
        :reporter kaocha.report/documentation}
       """
-    Given a file named "test/a/my/project/a_test.clj" with:
+    Given a file named "test/asuite/my/project/aa_test.clj" with:
       """clojure
-      (ns my.project.a-test
+      (ns my.project.aa-test
         (:require [clojure.test :refer :all]))
 
-      (deftest test0
-        (is (= 1 1)))
+      (deftest test-a0
+        (dotimes [_ 10] (is (= 1 1))))
 
-      (deftest test1
-        (is (= 2 2)))
+      (deftest test-a1
+        (dotimes [_ 20] (is (= 1 1))))
+
+      (deftest test-a2
+        (dotimes [_ 30] (is (= 1 1))))
       """
-    Given a file named "test/b/my/project/b_test.clj" with:
+    Given a file named "test/asuite/my/project/ab_test.clj" with:
       """clojure
-      (ns my.project.b-test
+      (ns my.project.ab-test
         (:require [clojure.test :refer :all]))
 
-      (deftest test3
-        (is (= 3 3)))
+      (deftest test-a3
+        (dotimes [_ 100] (is (= 1 1))))
 
-      (deftest test4
-        (is (= 4 4)))
+      (deftest test-a4
+        (dotimes [_ 200] (is (= 1 1))))
+
+      (deftest test-a5
+        (dotimes [_ 300] (is (= 1 1))))
+      """
+    Given a file named "test/bsuite/my/project/ba_test.clj" with:
+      """clojure
+      (ns my.project.ba-test
+        (:require [clojure.test :refer :all]))
+
+      (deftest test-b0
+        (dotimes [_ 11] (is (= 1 1))))
+
+      (deftest test-b1
+        (dotimes [_ 21] (is (= 1 1))))
+      """
+    Given a file named "test/bsuite/my/project/bb_test.clj" with:
+      """clojure
+      (ns my.project.bb-test
+        (:require [clojure.test :refer :all]))
+
+      (deftest test-b2
+        (dotimes [_ 31] (is (= 1 1))))
+
+      (deftest test-b3
+        (dotimes [_ 41] (is (= 1 1))))
       """
 
-  Scenario: Running tests on the first machine of two.
+  Scenario: Running tests on the first machine of two runs :asuite.
     When I run `bin/kaocha --seed 0 --partition-index 0 --partitions 2 --partition-strategy :suite --reporter documentation`
     Then the output should contain:
       """
-      my.project.b-test
-        test3
-        test4
+      6 tests, 660 assertions, 0 failures.
       """
 
-  Scenario: Running tests on the second machine of two.
+  Scenario: Running tests on the second machine of two runs :bsuite.
     When I run `bin/kaocha --seed 0 --partition-index 1 --partitions 2 --partition-strategy :suite --reporter documentation`
     Then the output should contain:
       """
-      my.project.b-test
-        test3
-        test4
+      4 tests, 104 assertions, 0 failures.
       """
