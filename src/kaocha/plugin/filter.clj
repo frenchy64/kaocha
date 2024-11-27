@@ -172,8 +172,8 @@
           average-duration (when var->duration
                              (/ (apply + (vals var->duration)) (count var->duration)))
           default-duration (or average-duration 1)]
-      (mapv (fn [id]
-              (get var->duration id default-duration))
+      (into {} (map (fn [id]
+                      [id (get var->duration id default-duration)]))
             enabled-test-ids))))
 
 (defn skip-tests [test-plan test-ids-to-skip]
@@ -210,10 +210,12 @@
     (:var :var-time)
     (let [;; must be sorted!
           enabled-ids (-> test-plan enabled-tests sort vec)
-          test-ids-to-skip (set (nth-weighted-partition partition-index partitions enabled-ids
-                                  (case partition-strategy
-                                    :var-time (test-weights test-plan enabled-ids)
-                                    :var nil)))]
+          id->weight (case partition-strategy
+                       :var-time (test-weights test-plan enabled-ids)
+                       :var nil)
+          test-plan (cond-> test-plan
+                      id->weight (assoc ::id->weight id->weight))
+          test-ids-to-skip (set (nth-weighted-partition partition-index partitions enabled-ids (some-> id->weight (mapv enabled-ids))))]
       (skip-tests test-plan test-ids-to-skip))
     test-plan))
 
@@ -323,4 +325,8 @@
                                    (filter-testable (filters test-plan))))))]
         (-> test-plan
             (update :kaocha.test-plan/tests (partial map filter-suite))
-            (partition-test-plan-by-test (:kaocha.filter/partition test-plan)))))))
+            (partition-test-plan-by-test (:kaocha.filter/partition test-plan))))))
+  (post-run [{::keys [id->weight] :as test-plan}]
+    (when (and id->weight (result/failed? test-plan))
+      (print "\nPartitioned vars with weights " (pr-str id->weight)))
+    test-plan))
