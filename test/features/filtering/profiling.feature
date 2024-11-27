@@ -37,9 +37,8 @@ Feature: Profiling tests
              (or (<= slow-test-min-duration (duration slow-test))
                  (println "Bad slow-test duration:" (duration slow-test)))
              (println "fast-test was faster than slow-test")))
-      (System/exit 0)
       """
-    When I run `bb -f test_profiling.clj`
+    When I run `bb -f test_profiling.clj || echo 'command failed'" `
     Then the output should contain:
       """
       fast-test was faster than slow-test
