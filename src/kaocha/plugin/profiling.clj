@@ -27,10 +27,12 @@
 (defn read-profiling-file [{:kaocha/keys [cli-options] :as config}]
   (when-some [f (:read-profiling-file cli-options)]
     (when (-> f io/file .exists)
-      (let [form (edn/read-string (slurp f))]
+      (let [form (edn/read-string (slurp f))
+            results (:results form)]
         (when (seq form)
           (assert (= 1 (::version form)) (pr-str form)))
-        (apply merge-with #(merge-with into %1 %2) (:results form))))))
+        (cond->> results
+          (sequential? results) (apply merge-with #(merge-with into %1 %2)))))))
 
 (defplugin kaocha.plugin/profiling
   (pre-run [test-plan]

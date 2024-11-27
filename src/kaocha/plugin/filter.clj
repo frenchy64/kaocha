@@ -173,7 +173,8 @@
                     enabled-test-ids]
   (if-not prior-profiling
     (println "Should provide profiling results via --read-profiling-file with :kaocha.plugin/profiling plugin, none found.")
-    (let [var->duration (not-empty
+    (let [_ (prn "prior-profiling" prior-profiling)
+          var->duration (not-empty
                           (into {} (map (fn [[k v]]
                                           (assert (= 1 (count v)) (str "Multiple results for " (pr-str k) ": " (pr-str v)))
                                           (let [weight (-> v first :kaocha.plugin.profiling/duration)]
@@ -218,6 +219,7 @@
           id->weight (case partition-strategy
                        :var-time (test-weights test-plan enabled-ids)
                        :var nil)
+          _ (prn "id->weight" (pr-str id->weight))
           test-plan (cond-> test-plan
                       id->weight (assoc ::id->weight id->weight))
           test-ids-to-skip (into #{} cat

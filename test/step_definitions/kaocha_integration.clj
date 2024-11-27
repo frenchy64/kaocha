@@ -66,11 +66,10 @@
   m)
 
 (Then "the EDN output should contain:" [m output]
-      (let  [actual (edn/read-string (:out m))
-             expected (edn/read-string output)]
+      (let [actual (edn/read-string (:out m))
+            expected (edn/read-string output)]
         (is (= (select-keys actual (keys expected)) expected)))
       m)
-
 
 (Then "stderr should contain" [m output]
   (is (substring? output (:err m)))
