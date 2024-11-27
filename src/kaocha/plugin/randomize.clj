@@ -28,10 +28,9 @@
 
 (defn randomize-test-plan [test-plan]
   (let [rng (rng (::seed test-plan))]
-    (assoc (->> test-plan
-                straight-sort
-                (rng-sort rng))
-           ::randomized true)))
+    (->> test-plan
+         straight-sort
+         (rng-sort rng))))
 
 (defplugin kaocha.plugin/randomize
   (cli-options [opts]

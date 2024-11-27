@@ -40,7 +40,7 @@
                              (= "tests.edn" (:config-file (:kaocha/cli-options results)))
                              (dissoc :config-file)
 
-                             (::randomize/randomized results)
+                             (::randomize/randomize? results)
                              (assoc :seed (::randomize/seed results)))))
                   (conj "--focus"
                         (str
