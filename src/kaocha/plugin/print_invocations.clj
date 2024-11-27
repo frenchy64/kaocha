@@ -36,7 +36,7 @@
                                :else
                                [(str "--" (name k))  v]))
                            (cond-> (dissoc (:kaocha/cli-options results) :focus :read-profiling-file :write-profiling-file
-                                           :partition-index :partition-strategy :target-partition-minutes :max-partitions)
+                                           :partitions :partition-index :partition-strategy :target-partition-minutes :max-partitions)
                              (= "tests.edn" (:config-file (:kaocha/cli-options results)))
                              (dissoc :config-file)
 
