@@ -42,7 +42,7 @@
       (merge m result))))
 
 (Then "the exit-code is non-zero" [{:keys [exit] :as m}]
-  (is (not= "0" exit))
+  (is (not= 0 (Integer. exit)))
   m)
 
 (Then "the exit-code should be {int}" [{:keys [exit] :as m} code]

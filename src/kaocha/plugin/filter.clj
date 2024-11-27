@@ -152,8 +152,7 @@
 (defn partition-suites-by-suite [{:keys [partition-strategy partition-index partitions]} suites]
   (case partition-strategy
     ;;TODO :suite-time
-    :suite (let [suites (vec suites)
-                 enabled-suites (->> suites
+    :suite (let [enabled-suites (->> suites
                                      (keep-indexed
                                        (fn [i suite]
                                          (when-not (:kaocha.testable/skip suite)
@@ -188,7 +187,7 @@
                       [id (get var->duration id default-duration)]))
             enabled-test-ids))))
 
-(defn skip-tests [test-plan test-ids-to-skip]
+(defn- skip-tests [test-plan test-ids-to-skip]
   {:pre [(set? test-ids-to-skip)]}
   (if-some [tests (:kaocha.test-plan/tests test-plan)]
     (assoc test-plan
@@ -207,7 +206,7 @@
     (if-some [tests (:kaocha.test-plan/tests testable)]
       (mapcat enabled-tests tests)
       (cond-> []
-        (and (map? testable) (not (::testable/skip testable)) (:kaocha.testable/id testable))
+        (and (map? testable) (:kaocha.testable/id testable))
         (conj (:kaocha.testable/id testable))))))
 
 (defn partition-test-plan-by-test [test-plan {:keys [partition-strategy partition-index partitions] :as partition-conf}]
@@ -221,7 +220,10 @@
                        :var nil)
           test-plan (cond-> test-plan
                       id->weight (assoc ::id->weight id->weight))
-          test-ids-to-skip (set (nth-weighted-partition partition-index partitions enabled-ids (some-> id->weight (mapv enabled-ids))))]
+          test-ids-to-skip (into #{} cat
+                                 (assoc (weighted-partition partitions enabled-ids (some-> id->weight (mapv enabled-ids)))
+                                        partition-index []))]
+      (prn "test-ids-to-skip" test-ids-to-skip)
       (skip-tests test-plan test-ids-to-skip))
     test-plan))
 
