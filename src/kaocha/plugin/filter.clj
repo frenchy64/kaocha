@@ -1,5 +1,6 @@
 (ns kaocha.plugin.filter
   (:require [kaocha.plugin :as plugin :refer [defplugin]]
+            [kaocha.result :as result]
             [kaocha.testable :as testable]
             [clojure.set :as set]
             [clojure.walk :as walk]
@@ -170,7 +171,7 @@
                                             [k weight])))
                                 (:kaocha.type/var prior-profiling)))
           average-duration (when var->duration
-                             (/ (apply + (vals var->duration)) (count var->duration)))
+                             (/ (apply +' (vals var->duration)) (count var->duration)))
           default-duration (or average-duration 1)]
       (into {} (map (fn [id]
                       [id (get var->duration id default-duration)]))
@@ -326,7 +327,7 @@
         (-> test-plan
             (update :kaocha.test-plan/tests (partial map filter-suite))
             (partition-test-plan-by-test (:kaocha.filter/partition test-plan))))))
-  (post-run [{::keys [id->weight] :as test-plan}]
-    (when (and id->weight (result/failed? test-plan))
+  (post-run [{{:keys [partition-strategy]} :kaocha.filter/partition ::keys [id->weight] :as test-plan}]
+    (when (and (= :var-time partition-strategy) id->weight (result/failed? test-plan))
       (print "\nPartitioned vars with weights " (pr-str id->weight)))
     test-plan))
