@@ -142,19 +142,30 @@
      (assert (every? (zipmap coll (repeat true)) (mapcat identity partitions)))
      partitions)))
 
+(defn nth-weighted-partition
+  ([partition-index npartitions coll]
+   (nth-weighted-partition partition-index npartitions coll nil))
+  ([partition-index npartitions coll weights]
+   (-> (weighted-partition npartitions coll weights)
+       (nth partition-index))))
+
 (defn partition-suites-by-suite [{:keys [partition-strategy partition-index partitions]} suites]
   (case partition-strategy
     ;;TODO :suite-time
     :suite (let [suites (vec suites)
-                 enabled-suites (into [] (keep-indexed
-                                           (fn [i suite]
-                                             (when-not (:kaocha.testable/skip suite)
-                                               i)))
-                                      suites)
-                 suites-for-this-partition (set (nth (weighted-partition partitions enabled-suites)
-                                                     partition-index))]
+                 enabled-suites (->> suites
+                                     (keep-indexed
+                                       (fn [i suite]
+                                         (when-not (:kaocha.testable/skip suite)
+                                           (:kaocha.testable/id suite))))
+                                     ;; must be sorted!
+                                     sort
+                                     vec)
+                 suites-for-this-partition (set (nth-weighted-partition partition-index partitions enabled-suites))]
              (mapv (fn [suite]
-                     (assoc suite :kaocha.testable/skip (not (suites-for-this-partition suite))))
+                     (cond-> suite
+                       (not (suites-for-this-partition (:kaocha.testable/id suite)))
+                       (assoc :kaocha.testable/skip true)))
                    suites))
     suites))
 
@@ -199,15 +210,9 @@
         (and (map? testable) (not (::testable/skip testable)) (:kaocha.testable/id testable))
         (conj (:kaocha.testable/id testable))))))
 
-(defn nth-weighted-partition
-  ([partition-index npartitions coll]
-   (nth-weighted-partition partition-index npartitions coll nil))
-  ([partition-index npartitions coll weights]
-   (-> (weighted-partition npartitions coll weights)
-       (nth partition-index))))
-
 (defn partition-test-plan-by-test [test-plan {:keys [partition-strategy partition-index partitions] :as partition-conf}]
   (case partition-strategy
+    ;;TODO :ns, :ns-time
     (:var :var-time)
     (let [;; must be sorted!
           enabled-ids (-> test-plan enabled-tests sort vec)
