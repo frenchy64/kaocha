@@ -78,8 +78,8 @@
                 profiling-results
                 {::version 1
                  :kaocha/cli-options (:kaocha/cli-options result)
-                 :results (mapv (fn [[k v]]
-                                  [k (group-by :kaocha.testable/id v)])
+                 :results (into {} (map (fn [[k v]]
+                                          [k (group-by :kaocha.testable/id v)]))
                                 profiling-results)}]
             (spit f (binding [*print-length* nil
                               *print-level* nil
