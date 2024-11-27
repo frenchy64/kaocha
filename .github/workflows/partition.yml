@@ -131,6 +131,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Restore Clojure dependencies
+        id: cache-check
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.CLOJURE_CACHE_PATHS }}
+          key: cljdeps-${{ env.ACTIONS_CACHE_VERSION }}-${{ hashFiles('deps.edn', 'bb.edn') }}
       - name: Install clojure tools
         if: steps.cache-check.outputs.cache-hit != 'true'
         uses: DeLaGuardo/setup-clojure@13.0
