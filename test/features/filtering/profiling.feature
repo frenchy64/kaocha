@@ -32,7 +32,7 @@ Feature: Profiling tests
             fast-test-min-duration 1e7
             slow-test-min-duration 1e9
             duration (comp :kaocha.plugin.profiling/duration first)]
-        (and (or (<= fast-test-min-duration (duration fast-test) slow-test-min-duration)
+        (and (or (<= fast-test-min-duration (duration fast-test) (dec slow-test-min-duration))
                  (println "Bad fast-test duration:" (duration fast-test)))
              (or (<= slow-test-min-duration (duration slow-test))
                  (println "Bad slow-test duration:" (duration slow-test)))
