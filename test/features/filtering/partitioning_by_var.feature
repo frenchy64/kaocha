@@ -34,10 +34,10 @@ Feature: Partitioning tests by var for load balancing
       """
       --- unit (clojure.test) ---------------------------
       my.project.a-test
-        test1
+        test0
 
       my.project.b-test
-        test4
+        test3
 
       2 tests, 2 assertions, 0 failures.
       """
@@ -48,10 +48,43 @@ Feature: Partitioning tests by var for load balancing
       """
       --- unit (clojure.test) ---------------------------
       my.project.a-test
-        test0
+        test1
 
+      my.project.b-test
+        test4
+
+      2 tests, 2 assertions, 0 failures.
+      """
+
+  Scenario: Running tests on the first machine of three, skipping test0.
+    When I run `bin/kaocha --seed 0 --skip my.project.a-test/test0 --partition-index 0 --partitions 3 --partition-strategy :var --reporter documentation`
+    Then the output should contain:
+      """
+      --- unit (clojure.test) ---------------------------
+      my.project.a-test
+        test1
+
+      1 tests, 1 assertions, 0 failures.
+      """
+
+  Scenario: Running tests on the second machine of three, skipping test0.
+    When I run `bin/kaocha --seed 0 --skip my.project.a-test/test0 --partition-index 1 --partitions 3 --partition-strategy :var --reporter documentation`
+    Then the output should contain:
+      """
+      --- unit (clojure.test) ---------------------------
       my.project.b-test
         test3
 
-      2 tests, 2 assertions, 0 failures.
+      1 tests, 1 assertions, 0 failures.
+      """
+
+  Scenario: Running tests on the third machine of three, skipping test0.
+    When I run `bin/kaocha --seed 0 --skip my.project.a-test/test0 --partition-index 2 --partitions 3 --partition-strategy :var --reporter documentation`
+    Then the output should contain:
+      """
+      --- unit (clojure.test) ---------------------------
+      my.project.b-test
+        test4
+
+      1 tests, 1 assertions, 0 failures.
       """
