@@ -1,8 +1,10 @@
-Feature: Partitioning tests by namespace for load balancing
+Feature: Partitioning tests by suite for load balancing
 
   An easy way to make your tests run faster is to partition the test suite such that
   each partition runs in parallel on separate machines. If you tell Kaocha which
   machine it is running on, it can automatically run the tests for the current machine.
+
+  Kaocha can partition tests by test suite.
 
   Background: A simple test suite
     Given a file named "tests.edn" with:

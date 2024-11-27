@@ -4,6 +4,8 @@ Feature: Partitioning tests automatically for load balancing
   each partition runs in parallel on separate machines. If you tell Kaocha which
   machine it is running on, it can automatically run the tests for the current machine.
 
+  Kaocha can automatically decide the fastest test partitioning strategy.
+
   Background: A simple test suite
     Given a file named "test/my/project/sample_test.clj" with:
       """clojure
