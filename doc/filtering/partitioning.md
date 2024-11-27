@@ -1,10 +1,12 @@
 <!-- This document is generated based on a corresponding .feature file, do not edit directly -->
 
-# Partitioning tests for load balancing
+# Partitioning tests automatically for load balancing
 
 An easy way to make your tests run faster is to partition the test suite such that
   each partition runs in parallel on separate machines. If you tell Kaocha which
   machine it is running on, it can automatically run the tests for the current machine.
+
+  Kaocha can automatically decide the fastest test partitioning strategy.
 
 ## Background: A simple test suite
 
@@ -25,14 +27,14 @@ An easy way to make your tests run faster is to partition the test suite such th
 
 ## Running tests on the first machine of two.
 
-- <em>When </em> I run `bin/kaocha --partition-index 0 --partitions 2`
+- <em>When </em> I run `bin/kaocha --partition-index 0 --partitions 2 --reporter documentation`
 
 - <em>Then </em> the output should contain:
 
 ``` nil
 --- unit (clojure.test) ---------------------------
 my.project.sample-test
-  other-test
+  some-test
 
 1 tests, 1 assertions, 0 failures.
 ```
@@ -41,7 +43,7 @@ my.project.sample-test
 
 ## Running tests on the second machine of two.
 
-- <em>When </em> I run `bin/kaocha --partition-index 1 --partitions 2`
+- <em>When </em> I run `bin/kaocha --partition-index 1 --partitions 2  --reporter documentation`
 
 - <em>Then </em> the output should contain:
 
