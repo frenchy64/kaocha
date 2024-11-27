@@ -112,7 +112,6 @@
           (or (nil? weights)
               (vector? weights))]}
    (let [weights (or weights (into [] (repeat (count coll) 1)))
-         _ (prn "weights" weights)
          _ (assert (= (count coll) (count weights)))
          heaviest (reduce-kv (fn [m k v]
                                (update m v (fnil conj []) k))
@@ -154,7 +153,6 @@
                                       suites)
                  suites-for-this-partition (set (nth (partition-into partitions enabled-suites)
                                                      partition-index))]
-             (prn "suites-for-this-partition" suites-for-this-partition)
              (mapv (fn [suite]
                      (assoc suite :kaocha.testable/skip (not (suites-for-this-partition suite))))
                    suites))
@@ -180,7 +178,6 @@
             enabled-tests))))
 
 (defn partition-test-plan-by-test [test-plan {:keys [partition-strategy partition-index partitions] :as partition-conf}]
-  (prn "partition-suite" partition-conf)
   (case partition-strategy
     (:var :var-time)
     (let [randomly-randomized? (and (::randomize/randomized test-plan)
@@ -210,13 +207,11 @@
                                      (conj {:path path :id (doto (:kaocha.testable/id testable)
                                                              assert)})))))
           enabled-tests (enabled-test-paths test-plan [])
-          _ (prn "enabled-tests" enabled-tests)
           tests-to-skip (nth (partition-into partitions enabled-tests
                                              (case partition-strategy
                                                :var-time (test-weights test-plan enabled-tests)
                                                :var nil))
                              partition-index)
-          _ (prn "tests-to-skip" tests-to-skip)
           test-plan (reduce (fn [test-plan {:keys [path]}]
                               (assoc-in test-plan (conj path :kaocha.testable/skip) true))
                             test-plan tests-to-skip)]

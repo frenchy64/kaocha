@@ -25,16 +25,12 @@
                               ChronoUnit/NANOS))))
 
 (defn read-profiling-file [{:kaocha/keys [cli-options] :as config}]
-  (prn "read-profiling-file" cli-options)
   (when-some [f (:read-profiling-file cli-options)]
-    (prn "read-profiling-file" f)
     (when (-> f io/file .exists)
-      (prn "exists" f)
       (let [form (edn/read-string (slurp f))]
         (when (seq form)
           (assert (= 1 (::version form)) (pr-str form)))
-        (doto (apply merge-with #(merge-with into %1 %2) (:results form))
-          prn)))))
+        (apply merge-with #(merge-with into %1 %2) (:results form))))))
 
 (defplugin kaocha.plugin/profiling
   (pre-run [test-plan]
