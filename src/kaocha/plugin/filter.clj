@@ -175,11 +175,11 @@
     (println "Should provide profiling results via --read-profiling-file with :kaocha.plugin/profiling plugin, none found.")
     (let [var->duration (not-empty
                           (into {} (map (fn [[k v]]
-                                          (assert (= 1 (count v)) (str "Multiple results for " (pr-str k) ": " (pr-str v)))
-                                          (let [weight (-> v first :kaocha.plugin.profiling/duration)]
-                                            (assert (nat-int? weight) (pr-str weight))
+                                          (assert (map? v))
+                                          (let [weight (:kaocha.plugin.profiling/duration v)]
+                                            (assert (<= 0 weight) (pr-str weight))
                                             [k weight])))
-                                (:kaocha.type/var prior-profiling)))
+                                (-> prior-profiling :results :kaocha.type/var)))
           average-duration (when var->duration
                              (/ (apply +' (vals var->duration)) (count var->duration)))
           default-duration (or average-duration 1)]

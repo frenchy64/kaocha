@@ -27,12 +27,7 @@
 (defn read-profiling-file [{:kaocha/keys [cli-options] :as config}]
   (when-some [f (:read-profiling-file cli-options)]
     (when (-> f io/file .exists)
-      (let [form (edn/read-string (slurp f))
-            results (:results form)]
-        (when (seq form)
-          (assert (= 1 (::version form)) (pr-str form)))
-        (cond->> results
-          (sequential? results) (apply merge-with #(merge-with into %1 %2)))))))
+      (edn/read-string (slurp f)))))
 
 (defplugin kaocha.plugin/profiling
   (pre-run [test-plan]
@@ -81,7 +76,8 @@
                 {::version 1
                  :kaocha/cli-options (:kaocha/cli-options result)
                  :results (into {} (map (fn [[k v]]
-                                          [k (group-by :kaocha.testable/id v)]))
+                                          [k (-> (group-by :kaocha.testable/id v)
+                                                 (update-vals #(assoc (first %) (apply +' (map ::duration %)))))]))
                                 profiling-results)}]
             (spit f (binding [*print-length* nil
                               *print-level* nil
