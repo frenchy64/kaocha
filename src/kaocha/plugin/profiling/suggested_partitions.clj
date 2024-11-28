@@ -8,7 +8,7 @@
             [babashka.fs :as fs]))
 
 (defn- dbg [{:keys [debug] :as m} msg]
-  (some-> debug (spit msg :append true)))
+  (some-> debug (spit (str msg "\n") :append true)))
 
 (defn suggest-partitions
   "Returns a suggested number of test partitions based on previous results."
@@ -27,7 +27,7 @@
         (as-> $ (spit (System/getenv "GITHUB_OUTPUT")
                       (let [delim (random-uuid)
                             s (format "%s<<%s\n%s\n%s\n" set-matrix-output delim $ delim)]
-                        (dbg m s)
+                        (dbg m (str "output\nvvvvvv" s "^^^^^^^"))
                         s)
                       :append true)))))
 
