@@ -77,7 +77,9 @@ jobs:
           bin/suggested-partitions '{:input-file "kaocha-profiling.edn"
                                      :default-partitions ${{ env.DEFAULT_PARTITIONS }}
                                      :max-partitions ${{ env.MAX_PARTITIONS }}
+                                     :debug "debug-suggested-partitions.txt"
                                      :github-actions/set-matrix-output "test-partitions"}'
+          cat debug-suggested-partitions.txt
       - name: Share profiling results with tests
         uses: actions/upload-artifact@v4
         with:
