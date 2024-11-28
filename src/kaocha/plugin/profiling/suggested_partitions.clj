@@ -41,7 +41,7 @@
   (run (edn/read-string (first args))))
 
 (defn -main [& args]
-  (try (System/exit (parse+run args))
+  (try (System/exit (apply parse+run args))
        (catch Throwable e
          (.printStackTrace e)
          (System/exit 1))
