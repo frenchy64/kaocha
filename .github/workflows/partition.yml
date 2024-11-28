@@ -131,13 +131,17 @@ jobs:
             --write-profiling-file current-kaocha-profiling-${{ strategy.job-index }}.edn \
             --partition-index ${{ strategy.job-index }} \
             --partitions ${{ strategy.job-total }} \
-            --partition-strategy ${{ env.PARTITION_STRATEGY }}
+            --partition-strategy ${{ env.PARTITION_STRATEGY }} \
+            --plugin kaocha.plugin/junit-xml \
+            --junit-xml-file "junit-${{ strategy.job-index }}.xml"
       - name: Upload profiling results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: current-kaocha-profiling-${{ strategy.job-index }}
-          path: current-kaocha-profiling-${{ strategy.job-index }}.edn
+          path: |
+            current-kaocha-profiling-${{ strategy.job-index }}.edn
+            junit-${{ strategy.job-index }}.xml
   result:
     timeout-minutes: 5
     if: ${{!cancelled() && needs.setup.result == 'success'}}
@@ -165,7 +169,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: all-kaocha-profiling
-          path: current-kaocha-profiling-*.edn
+          path: |
+            current-kaocha-profiling-*.edn
+            junit-*.xml
           compression-level: 0
           retention-days: 1
       - name: Print test timings
@@ -175,6 +181,10 @@ jobs:
           ./bin/kaocha-bb --combine-partitioned-results \
             '{:result-files ["current-kaocha-profiling-*.edn"]
               :output-file "kaocha-profiling.edn"}'
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@992d97d6eb2e5f3de985fbf9df6a04386874114d
+        with:
+          report_paths: "junit-*.xml"
       - name: Update Profiling Cache
         id: profiling
         uses: actions/cache/save@v4

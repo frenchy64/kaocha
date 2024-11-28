@@ -22,7 +22,8 @@
                  lambdaisland/kaocha-cloverage {:mvn/version "1.1.89" :exclusions [lambdaisland/kaocha]}
                  nubank/matcher-combinators    {:mvn/version "1.5.2"}
                  akvo/fs                       {:mvn/version "20180904-152732.6dad3934"}
-                 orchestra/orchestra           {:mvn/version "2021.01.01-1"}}}
+                 orchestra/orchestra           {:mvn/version "2021.01.01-1"}
+                 lambdaisland/kaocha-junit-xml {:mvn/version "1.17.101" :exclusions [lambdaisland/kaocha]}}}
 
   :feature-docs
   {:extra-deps
