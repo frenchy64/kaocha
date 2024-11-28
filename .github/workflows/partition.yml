@@ -73,8 +73,8 @@ jobs:
 
       - name: Setup matrix partitions
         id: test-partitions
-        run: >
-          ./bin/kaocha-bb --print-suggested-partitions
+        run: |
+          ./bin/kaocha-bb --print-suggested-partitions \
             '{:input-file "kaocha-profiling.edn"
               :default-partitions ${{ env.DEFAULT_PARTITIONS }}
               :max-partitions ${{ env.MAX_PARTITIONS }}
@@ -152,8 +152,8 @@ jobs:
           pattern: current-kaocha-profiling-*.edn
           merge-multiple: true
       - name: Combine results
-        run: >
-          ./bin/kaocha-bb --combine-partitioned-results
+        run: |
+          ./bin/kaocha-bb --combine-partitioned-results \
             '{:result-files ["current-kaocha-profiling-*.edn"]
               :output-file "kaocha-profiling.edn"}'
       - name: Update Profiling Cache
