@@ -31,7 +31,7 @@ Feature: Profiling tests
       (let [{:my.project.sample-test/keys [fast-test slow-test]} (-> "profiling.edn" slurp edn/read-string :results :kaocha.type/var)
             fast-test-min-duration 1e7
             slow-test-min-duration 1e9
-            duration (comp :kaocha.plugin.profiling/duration first)]
+            duration :kaocha.plugin.profiling/duration]
         (and (or (<= fast-test-min-duration (duration fast-test) (dec slow-test-min-duration))
                  (println "Bad fast-test duration:" (duration fast-test)))
              (or (<= slow-test-min-duration (duration slow-test))
