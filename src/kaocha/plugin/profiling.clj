@@ -77,7 +77,7 @@
                  :kaocha/cli-options (:kaocha/cli-options result)
                  :results (into {} (map (fn [[k v]]
                                           [k (-> (group-by :kaocha.testable/id v)
-                                                 (update-vals #(assoc (first %) (apply +' (map ::duration %)))))]))
+                                                 (update-vals #(assoc (first %) ::duration (apply +' (map ::duration %)))))]))
                                 profiling-results)}]
             (spit f (binding [*print-length* nil
                               *print-level* nil
