@@ -38,7 +38,7 @@ Feature: Plugin: Notifier (desktop notifications)
      ;; Configuring a command is optional. Since CI does not have desktop
      ;; notifications we pipe to a file instead.
      :kaocha.plugin.notifier/command
-     "sh -c 'echo \"%{title}\n%{message}\n%{failed?}\n%{count}\n%{urgency}\" > notifications.txt'"
+     "sh -c 'echo \"%{title}\n%{message}\n%{failed?}\n%{count}\n%{urgency}\" > /tmp/kaocha.txt'"
 
      ;; Fallbacks:
 
@@ -57,9 +57,9 @@ Feature: Plugin: Notifier (desktop notifications)
     (deftest simple-fail-test
       (is (= :same :not-same)))
     """
-    When I run `bin/kaocha`
+    When I run `sh -c 'CI=false bin/kaocha'`
     Then the exit-code should be 1
-    And I run `cat notifications.txt`
+    And I run `cat /tmp/kaocha.txt`
     Then the exit-code should be 0
     And the output should contain:
     """
