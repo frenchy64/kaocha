@@ -17,22 +17,22 @@ Feature: Partitioning tests by var time for load balancing
     Given a file named "kaocha-profiling.edn" with:
       """ edn
       {:kaocha.plugin.profiling/version 1,
-       :results {:kaocha.type/var {:my.project.a-test/test0 [{:kaocha.plugin.profiling/duration 534083000,
-                                                              :kaocha.testable/type :kaocha.type/var,
-                                                              :kaocha.var/name my.project.a-test/test0,
-                                                              :kaocha.testable/id :my.project.a-test/test0}],
-                                   :my.project.a-test/test1 [{:kaocha.plugin.profiling/duration 27571000,
-                                                              :kaocha.testable/type :kaocha.type/var,
-                                                              :kaocha.var/name my.project.a-test/test1,
-                                                              :kaocha.testable/id :my.project.a-test/test1}],
-                                   :my.project.b-test/test3 [{:kaocha.plugin.profiling/duration 1452000,
-                                                              :kaocha.testable/type :kaocha.type/var,
-                                                              :kaocha.var/name my.project.b-test/test3,
-                                                              :kaocha.testable/id :my.project.b-test/test3}]
-                                   :my.project.b-test/test4 [{:kaocha.plugin.profiling/duration 2056000,
-                                                              :kaocha.testable/type :kaocha.type/var,
-                                                              :kaocha.var/name my.project.b-test/test4,
-                                                              :kaocha.testable/id :my.project.b-test/test4}]}}}
+       :results {:kaocha.type/var {:my.project.a-test/test0 {:kaocha.plugin.profiling/duration 534083000,
+                                                             :kaocha.testable/type :kaocha.type/var,
+                                                             :kaocha.var/name my.project.a-test/test0,
+                                                             :kaocha.testable/id :my.project.a-test/test0},
+                                   :my.project.a-test/test1 {:kaocha.plugin.profiling/duration 27571000,
+                                                             :kaocha.testable/type :kaocha.type/var,
+                                                             :kaocha.var/name my.project.a-test/test1,
+                                                             :kaocha.testable/id :my.project.a-test/test1},
+                                   :my.project.b-test/test3 {:kaocha.plugin.profiling/duration 1452000,
+                                                             :kaocha.testable/type :kaocha.type/var,
+                                                             :kaocha.var/name my.project.b-test/test3,
+                                                             :kaocha.testable/id :my.project.b-test/test3}
+                                   :my.project.b-test/test4 {:kaocha.plugin.profiling/duration 2056000,
+                                                             :kaocha.testable/type :kaocha.type/var,
+                                                             :kaocha.var/name my.project.b-test/test4,
+                                                             :kaocha.testable/id :my.project.b-test/test4}}}}
       """
     Given a file named "test/my/project/a_test.clj" with:
       """ clojure
