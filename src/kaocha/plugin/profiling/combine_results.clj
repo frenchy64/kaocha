@@ -10,11 +10,10 @@
                     (mapcat #(fs/glob "." %) result-files))
         _ (assert (seq forms) (pr-str result-files))
         results (mapv :results forms)
-        except-results (mapv #(dissoc % :results) forms)
         _ (assert (every? #(= 1 (:kaocha.plugin.profiling/version %)) forms))
-        base (assoc {} ; (first except-results)
-                    :results (apply merge-with #(merge-with into %1 %2) (map :results forms)))
-        {:keys [target-partition-minutes max-partitions]} (:kaocha/cli-options base)]
+        base {:kaocha.plugin.profiling/version 1
+              :results (apply merge-with #(merge-with into %1 %2) (map :results forms))}
+        {:keys [target-partition-minutes max-partitions]} (-> forms first :kaocha/cli-options)]
     (cond-> base
       target-partition-minutes (assoc :suggested-partitions
                                       (let [max-partitions (or max-partitions 10)
