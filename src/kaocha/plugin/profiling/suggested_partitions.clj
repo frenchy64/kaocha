@@ -45,8 +45,7 @@
 (defn- parse+run [& args]
   (when (not= 1 (count args))
     (throw (ex-info "Must provide 1 map argument: '{:input-file \"profiling1.edn\" :default-partitions 5 :max-partitions 10}'" {})))
-  (dbg m (format "args=%s" (pr-str args)))
-  (run (edn/read-string (first args))))
+  (run (assoc (edn/read-string (first args)) :args args)))
 
 (defn -main [& args]
   (try (System/exit (apply parse+run args))
