@@ -77,6 +77,7 @@ jobs:
         run: |
           ./bin/kaocha-bb --print-suggested-partitions \
             '{:input-file "kaocha-profiling.edn"
+              :target-partition-minutes ${{ env.TARGET_PARTITION_MINUTES }} \
               :default-partitions ${{ env.DEFAULT_PARTITIONS }}
               :max-partitions ${{ env.MAX_PARTITIONS }}
               :debug "debug-suggested-partitions.txt"
@@ -170,8 +171,6 @@ jobs:
         run: |
           ./bin/kaocha-bb --combine-partitioned-results \
             '{:result-files ["current-kaocha-profiling-*.edn"]
-              :target-partition-minutes ${{ env.TARGET_PARTITION_MINUTES }} \
-              :partition-strategy ${{ env.PARTITION_STRATEGY }}
               :output-file "kaocha-profiling.edn"}'
       - name: Update Profiling Cache
         id: profiling
