@@ -80,6 +80,7 @@ jobs:
               :target-partition-minutes ${{ env.TARGET_PARTITION_MINUTES }}
               :default-partitions ${{ env.DEFAULT_PARTITIONS }}
               :max-partitions ${{ env.MAX_PARTITIONS }}
+              :partition-strategy ${{ env.PARTITION_STRATEGY }}
               :debug "debug-suggested-partitions.txt"
               :github-actions/set-matrix-output "test-partitions"}'
 
