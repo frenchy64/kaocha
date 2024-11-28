@@ -17,13 +17,14 @@
          max-partitions)))
 
 (defn set-github-actions-output [{:github-actions/keys [set-matrix-output debug] :as m} npartitions]
-  (-> npartitions range json/encode
-      (as-> $ (spit (System/getenv "GITHUB_OUTPUT")
-                    (let [delim (random-uuid)
-                          s (format "%s<<%s\n%s\n%s\n" set-matrix-output delim $ delim)]
-                      (some-> debug (spit s :append true))
-                      s)
-                    :append true))))
+  (when set-matrix-output
+    (-> npartitions range json/encode
+        (as-> $ (spit (System/getenv "GITHUB_OUTPUT")
+                      (let [delim (random-uuid)
+                            s (format "%s<<%s\n%s\n%s\n" set-matrix-output delim $ delim)]
+                        (some-> debug (spit s :append true))
+                        s)
+                      :append true)))))
 
 (defn run [m]
   (let [npartitions (suggest-partitions m)]
