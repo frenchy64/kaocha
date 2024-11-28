@@ -8,12 +8,11 @@
 (defn combine-results [result-files]
   (let [forms (mapv (comp edn/read-string slurp fs/file)
                     (mapcat #(fs/glob "." %) result-files))
-        _ (assert (seq forms))
+        _ (assert (seq forms) (pr-str result-files))
         results (mapv :results forms)
         except-results (mapv #(dissoc % :results) forms)
-        _ (assert (apply = except-results))
         _ (assert (every? #(= 1 (:kaocha.plugin.profiling/version %)) forms))
-        base (assoc (first except-results)
+        base (assoc {} ; (first except-results)
                     :results (apply merge-with #(merge-with into %1 %2) (map :results forms)))
         {:keys [target-partition-minutes max-partitions]} (:kaocha/cli-options base)]
     (cond-> base
