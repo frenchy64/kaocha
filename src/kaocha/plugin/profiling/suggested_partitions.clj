@@ -3,9 +3,7 @@
 ;; => 1
 
 (ns kaocha.plugin.profiling.suggested-partitions
-  (:require [clojure.edn :as edn]
-            [cheshire.core :as json]
-            [babashka.fs :as fs]))
+  (:require [clojure.edn :as edn]))
 
 (defn- dbg [{:keys [debug] :as m} msg]
   (some-> debug (spit (str msg "\n") :append true)))
@@ -21,9 +19,13 @@
     (min (or suggested-partitions default-partitions)
          max-partitions)))
 
+;; save a dep on cheshire on jvm
+(defn- json-matrix [n]
+  (str "[" (apply str (interpose "," (range n))) "]"))
+
 (defn- set-github-actions-output [{:github-actions/keys [set-matrix-output] :as m} npartitions]
   (when set-matrix-output
-    (-> npartitions range json/encode
+    (-> npartitions json-matrix
         (as-> $ (spit (System/getenv "GITHUB_OUTPUT")
                       (let [delim (random-uuid)
                             s (format "%s<<%s\n%s\n%s\n" set-matrix-output delim $ delim)]
@@ -38,7 +40,7 @@
     (set-github-actions-output m npartitions)
     (println
       (case (:print m :partitions)
-        :github-actions/json-matrix (-> npartitions range json/encode)
+        :github-actions/json-matrix (json-matrix npartitions)
         :partitions npartitions))
     0))
 
