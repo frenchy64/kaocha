@@ -36,9 +36,13 @@
                                :else
                                [(str "--" (name k))  v]))
                            (cond-> (dissoc (:kaocha/cli-options results) :focus :read-profiling-file :write-profiling-file
-                                           :partitions :partition-index :partition-strategy :target-partition-minutes :max-partitions)
+                                           :partitions :partition-index :partition-strategy :target-partition-minutes :max-partitions
+                                           :junit-xml-file :junit-xml-add-location-metadata)
                              (= "tests.edn" (:config-file (:kaocha/cli-options results)))
                              (dissoc :config-file)
+
+                             (= [:kaocha.plugin/junit-xml] (:plugin (:kaocha/cli-options results)))
+                             (update :kaocha/cli-option dissoc :plugin)
 
                              (::randomize/randomize? results)
                              (assoc :seed (::randomize/seed results)))))
