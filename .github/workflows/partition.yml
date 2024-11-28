@@ -74,7 +74,7 @@ jobs:
       - name: Setup matrix partitions
         id: test-partitions
         run: >
-          ./bin/koacha-bb --print-suggested-partitions
+          ./bin/kaocha-bb --print-suggested-partitions
             '{:input-file "kaocha-profiling.edn"
               :default-partitions ${{ env.DEFAULT_PARTITIONS }}
               :max-partitions ${{ env.MAX_PARTITIONS }}

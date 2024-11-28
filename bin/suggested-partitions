@@ -1,2 +1,0 @@
-#!/bin/bash
-bb -m kaocha.plugin.profiling.suggested-partitions "$@"
