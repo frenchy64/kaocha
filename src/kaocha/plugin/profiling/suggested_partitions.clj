@@ -10,12 +10,24 @@
 
 (defn suggest-partitions
   "Returns a suggested number of test partitions based on previous results."
-  [{:keys [input-file default-partitions max-partitions]}]
+  [{:keys [input-file default-partitions max-partitions target-partition-minutes partition-strategy]}]
   {:post [(pos-int? %)]}
   (assert input-file)
   (assert default-partitions)
   (assert max-partitions)
-  (let [{:keys [suggested-partitions]} (-> input-file slurp edn/read-string)]
+  (let [base (-> input-file slurp edn/read-string)
+        suggested-partitions (let [max-partitions (or max-partitions 10)
+                                   _ (assert (pos? max-partitions))
+                                   target-partition-ns (*' 60 60 1e6 target-partition-minutes)
+                                   total-duration-ns (apply +' (map :kaocha.plugin.profiling/duration
+                                                                    (vals (get-in base [:results :kaocha.type/var]))))]
+                               ;; 100ns total duration
+                               ;; 10ns target
+                               ;; 100/10 => 10 partitions
+                               (-> (/ total-duration-ns target-partition-ns)
+                                   Math/ceil
+                                   (max max-partitions)
+                                   (min 1)))]
     (min (or suggested-partitions default-partitions)
          max-partitions)))
 

@@ -19,22 +19,7 @@
                               results)}
         {:keys [target-partition-minutes max-partitions]} (-> forms first :kaocha/cli-options)]
     ;(prn "target-partition-minutes" target-partition-minutes)
-    (cond-> base
-      target-partition-minutes (assoc :suggested-partitions
-                                      (let [max-partitions (or max-partitions 10)
-                                            _ (prn "max-partitions" max-partitions)
-                                            _ (assert (pos? max-partitions))
-                                            target-partition-ns (*' 60 60 1e6 target-partition-minutes)
-                                            total-duration-ns (apply +' (map :kaocha.plugin.profiling/duration
-                                                                             (vals (get-in base [:results :kaocha.type/var]))))]
-                                        ;; 100ns total duration
-                                        ;; 10ns target
-                                        ;; 100/10 => 10 partitions
-                                        (prn "total-duration-ns" total-duration-ns)
-                                        (-> (/ total-duration-ns target-partition-ns)
-                                            Math/ceil
-                                            (max max-partitions)
-                                            (min 1)))))))
+    base))
 
 (defn parse+run [& args]
   (assert (= 1 (count args)) (pr-str args))
