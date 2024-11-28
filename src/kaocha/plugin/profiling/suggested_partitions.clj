@@ -1,5 +1,5 @@
 #!/usr/bin/env bb
-;;./src/kaocha/plugin/profiling/suggested_partitions.clj '{:input-file "profiling1.edn" :default-partitions 5 :max-partitions 10}'
+;; bb -m kaocha.plugin.profiling.suggested-partitions '{:input-file "profiling1.edn" :default-partitions 5 :max-partitions 10}'
 ;; => 1
 
 (ns kaocha.plugin.profiling.suggested-partitions
@@ -7,7 +7,9 @@
             [cheshire.core :as json]
             [babashka.fs :as fs]))
 
-(defn suggest-partitions [{:keys [input-file default-partitions max-partitions]}]
+(defn suggest-partitions
+  "Returns a suggested number of test partitions based on previous results."
+  [{:keys [input-file default-partitions max-partitions]}]
   {:post [(pos-int? %)]}
   (assert input-file)
   (assert default-partitions)
