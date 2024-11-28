@@ -32,7 +32,6 @@
                                  ;; 100/10 => 10 partitions
                                  (-> (/ total-duration-ns target-partition-ns)
                                      Math/ceil
-                                     (max max-partitions)
                                      (max 1))))]
     (min suggested-partitions max-partitions)))
 
