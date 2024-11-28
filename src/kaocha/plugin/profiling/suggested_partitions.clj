@@ -11,10 +11,11 @@
 
 (defn suggest-partitions
   "Returns a suggested number of test partitions based on previous results."
-  [{:keys [input-file default-partitions max-partitions target-partition-minutes partition-strategy]}]
+  [{:keys [input-file default-partitions min-partitions max-partitions target-partition-minutes partition-strategy]}]
   {:post [(pos-int? %)]}
   (assert input-file "Must provide :input-file")
   (assert default-partitions "Must provide :default-partitions")
+  (assert min-partitions "Must provide :min-partitions")
   (assert max-partitions "Must provide :max-partitions")
   (assert target-partition-minutes "Must provide :target-partition-minutes")
   (assert (= :var-time partition-strategy) "Must provide :partition-strategy must be :var-time")
@@ -22,17 +23,23 @@
                (-> input-file slurp edn/read-string))
         suggested-partitions (if-not base 
                                default-partitions
+                               ;;FIXME this doesn't seem to work
                                (let [max-partitions (or max-partitions 10)
                                      _ (assert (pos? max-partitions))
-                                     target-partition-ns (*' 60 60 1e6 target-partition-minutes)
-                                     total-duration-ns (apply +' (map :kaocha.plugin.profiling/duration
-                                                                      (vals (get-in base [:results :kaocha.type/var]))))]
+                                     total-duration-minutes (/ (apply +' (map :kaocha.plugin.profiling/duration
+                                                                              (vals (get-in base [:results :kaocha.type/var]))))
+                                                               6e10)]
+                                 ;(prn "target-partition-minutes" target-partition-minutes)
+                                 ;(prn "total-duration-minutes" total-duration-minutes)
+                                 ;(prn "div" (/ total-duration-minutes target-partition-minutes)
+                                 ;     (/ target-partition-minutes total-duration-minutes))
                                  ;; 100ns total duration
                                  ;; 10ns target
                                  ;; 100/10 => 10 partitions
-                                 (-> (/ total-duration-ns target-partition-ns)
+                                 (-> (/ total-duration-minutes target-partition-minutes)
                                      Math/ceil
-                                     (max 1))))]
+                                     long
+                                     (max min-partitions))))]
     (min suggested-partitions max-partitions)))
 
 ;; save a dep on cheshire on jvm

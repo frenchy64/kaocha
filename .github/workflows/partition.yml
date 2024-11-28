@@ -17,6 +17,7 @@ env:
     ~/.deps.clj
   PARTITION_STRATEGY: ":var-time"
   TARGET_PARTITION_MINUTES: 3
+  MIN_PARTITIONS: 5
   MAX_PARTITIONS: 10
   DEFAULT_PARTITIONS: 5
 
@@ -79,6 +80,7 @@ jobs:
             '{:input-file "kaocha-profiling.edn"
               :target-partition-minutes ${{ env.TARGET_PARTITION_MINUTES }}
               :default-partitions ${{ env.DEFAULT_PARTITIONS }}
+              :min-partitions ${{ env.MIN_PARTITIONS }}
               :max-partitions ${{ env.MAX_PARTITIONS }}
               :partition-strategy ${{ env.PARTITION_STRATEGY }}
               :debug "debug-suggested-partitions.txt"
