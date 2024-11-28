@@ -158,6 +158,11 @@ jobs:
         with:
           pattern: current-kaocha-profiling-*
           merge-multiple: true
+      - name: Upload test timings for manual inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: all-kaocha-profiling
+          path: current-kaocha-profiling-*.edn
       - name: Print test timings
         run: cat current-kaocha-profiling-*.edn
       - name: Combine results
