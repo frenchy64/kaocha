@@ -240,7 +240,7 @@ Then you can create a binstub named `bin/kaocha-bb`:
 ```shell
 
 #!/usr/bin/env bash
-bb -m kaocha.runner/-main  $@
+bb -m kaocha.runner/-main "$@"
 
 ```
 

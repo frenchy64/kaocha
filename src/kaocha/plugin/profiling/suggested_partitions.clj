@@ -44,7 +44,7 @@
         :partitions npartitions))
     0))
 
-(defn- parse+run [& args]
+(defn parse+run [& args]
   (when (not= 1 (count args))
     (throw (ex-info "Must provide 1 map argument: '{:input-file \"profiling1.edn\" :default-partitions 5 :max-partitions 10}'" {})))
   (run (assoc (edn/read-string (first args)) :args args)))

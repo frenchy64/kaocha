@@ -74,11 +74,11 @@ jobs:
       - name: Setup matrix partitions
         id: test-partitions
         run: |
-          bin/suggested-partitions '{:input-file "kaocha-profiling.edn"
-                                     :default-partitions ${{ env.DEFAULT_PARTITIONS }}
-                                     :max-partitions ${{ env.MAX_PARTITIONS }}
-                                     :debug "debug-suggested-partitions.txt"
-                                     :github-actions/set-matrix-output "test-partitions"}'
+          bin/koacha-bb --print-suggested-partitions '{:input-file "kaocha-profiling.edn"
+                                                       :default-partitions ${{ env.DEFAULT_PARTITIONS }}
+                                                       :max-partitions ${{ env.MAX_PARTITIONS }}
+                                                       :debug "debug-suggested-partitions.txt"
+                                                       :github-actions/set-matrix-output "test-partitions"}'
           cat debug-suggested-partitions.txt
       - name: Share profiling results with tests
         uses: actions/upload-artifact@v4
@@ -141,7 +141,6 @@ jobs:
           path: ${{ env.CLOJURE_CACHE_PATHS }}
           key: cljdeps-${{ env.ACTIONS_CACHE_VERSION }}-${{ hashFiles('deps.edn', 'bb.edn') }}
       - name: Install clojure tools
-        if: steps.cache-check.outputs.cache-hit != 'true'
         uses: DeLaGuardo/setup-clojure@13.0
         with:
           bb: ${{ env.BB_VERSION }}
@@ -151,7 +150,7 @@ jobs:
           pattern: current-kaocha-profiling-*.edn
           merge-multiple: true
       - name: Combine results
-        run: ./src/kaocha/plugin/profiling/combine_results.clj '{:result-files ["current-kaocha-profiling-*.edn"] :output-file "kaocha-profiling.edn"}'
+        run: bin/kaocha-bb --combine-partitioned-results '{:result-files ["current-kaocha-profiling-*.edn"] :output-file "kaocha-profiling.edn"}'
       - name: Update Profiling Cache
         id: profiling
         uses: actions/cache/save@v4

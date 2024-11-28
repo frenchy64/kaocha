@@ -31,14 +31,17 @@
                                             (max max-partitions)
                                             (min 1)))))))
 
+(defn parse+run [& args]
+  (assert (= 1 (count args)) (pr-str args))
+  (let [{:keys [result-files output-file]} (edn/read-string (first args))]
+    (spit output-file (binding [*print-length* nil
+                                *print-level* nil
+                                *print-namespace-maps* false]
+                        (pr-str (combine-results result-files))))
+    0))
+
 (defn -main [& args]
-  (try (assert (= 1 (count args)) (pr-str args))
-       (let [{:keys [result-files output-file]} (edn/read-string (first args))]
-         (spit output-file (binding [*print-length* nil
-                                     *print-level* nil
-                                     *print-namespace-maps* false]
-                             (pr-str (combine-results result-files))))
-         (System/exit 0))
+  (try (System/exit (apply parse+run args)) 
        (catch Throwable e
          (.printStackTrace e)
          (System/exit 1))

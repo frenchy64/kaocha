@@ -30,6 +30,8 @@
    [nil  "--print-config"       "Print out the fully merged and normalized config, then exit."]
    [nil  "--print-test-plan"    "Load tests, build up a test plan, then print out the test plan and exit."]
    [nil  "--print-result"       "Print the test result map as returned by the Kaocha API."]
+   [nil  "--print-suggested-partitions MAP"  "Print the suggested number of test partitions based on prior timing."]
+   [nil  "--combine-partitioned-results MAP"   "Combine and verify results for a partitioned test run."]
    [nil  "--[no-]fail-fast"     "Stop testing after the first failure."]
    [nil  "--[no-]color"         "Enable/disable ANSI color codes in output. Defaults to true."]
    [nil  "--[no-]watch"         "Watch filesystem for changes and re-run tests."]
@@ -104,6 +106,14 @@
       (binding [clojure.core/*print-namespace-maps* false]
         (pprint/pprint (api/test-plan (plugin/run-hook :kaocha.hooks/config config)))
         0)
+
+      (:print-suggested-partitions options)
+      ((requiring-resolve 'kaocha.plugin.profiling.suggested-partitions/parse+run)
+       (:print-suggested-partitions options))
+
+      (:combine-partitioned-results options)
+      ((requiring-resolve 'kaocha.plugin.profiling.combine-results/parse+run)
+       (:combine-partitioned-results options))
 
       (seq unknown-suites)
       (do
