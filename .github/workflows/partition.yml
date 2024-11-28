@@ -15,7 +15,7 @@ env:
     ~/.m2/repository
     ~/.gitlibs
     ~/.deps.clj
-  TARGET_PARTITION_MINUTES: 10
+  TARGET_PARTITION_MINUTES: 3
   MAX_PARTITIONS: 10
   DEFAULT_PARTITIONS: 5
 
