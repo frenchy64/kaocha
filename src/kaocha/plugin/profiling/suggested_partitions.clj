@@ -33,7 +33,7 @@
                                  (-> (/ total-duration-ns target-partition-ns)
                                      Math/ceil
                                      (max max-partitions)
-                                     (min 1))))]
+                                     (max 1))))]
     (min suggested-partitions max-partitions)))
 
 ;; save a dep on cheshire on jvm
