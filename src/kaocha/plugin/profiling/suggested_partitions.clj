@@ -32,6 +32,7 @@
                       :append true)))))
 
 (defn run [m]
+  (dbg m (format "m=%s" (pr-str m)))
   (let [npartitions (suggest-partitions m)]
     (dbg m (format "npartitions=%s" npartitions))
     (set-github-actions-output m npartitions)
@@ -44,6 +45,7 @@
 (defn- parse+run [& args]
   (when (not= 1 (count args))
     (throw (ex-info "Must provide 1 map argument: '{:input-file \"profiling1.edn\" :default-partitions 5 :max-partitions 10}'" {})))
+  (dbg m (format "args=%s" (pr-str args)))
   (run (edn/read-string (first args))))
 
 (defn -main [& args]
