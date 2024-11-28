@@ -77,7 +77,7 @@ jobs:
         run: |
           ./bin/kaocha-bb --print-suggested-partitions \
             '{:input-file "kaocha-profiling.edn"
-              :target-partition-minutes ${{ env.TARGET_PARTITION_MINUTES }} \
+              :target-partition-minutes ${{ env.TARGET_PARTITION_MINUTES }}
               :default-partitions ${{ env.DEFAULT_PARTITIONS }}
               :max-partitions ${{ env.MAX_PARTITIONS }}
               :debug "debug-suggested-partitions.txt"
