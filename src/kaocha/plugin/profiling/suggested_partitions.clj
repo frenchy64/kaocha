@@ -16,7 +16,8 @@
          max-partitions)))
 
 (defn -main [& args]
-  (try (assert (= 1 (count args)) (pr-str args))
+  (try (when (not= 1 (count args))
+         (throw (ex-info "Must provide 1 map argument: '{:input-file \"profiling1.edn\" :default-partitions 5 :max-partitions 10}'" {})))
        (let [m (edn/read-string (first args))
              suggestion (suggest-partitions m)]
          (println suggestion)
