@@ -14,7 +14,7 @@
         base {:kaocha.plugin.profiling/version 1
               :results (apply merge-with #(merge-with (fn [l r]
                                                         (update l :kaocha.plugin.profiling/duration
-                                                                + (:kaocha.plugin.profiling/duration r)))
+                                                                +' (:kaocha.plugin.profiling/duration r)))
                                                       %1 %2)
                               results)}
         {:keys [target-partition-minutes max-partitions]} (-> forms first :kaocha/cli-options)]

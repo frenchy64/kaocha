@@ -15,6 +15,7 @@ env:
     ~/.m2/repository
     ~/.gitlibs
     ~/.deps.clj
+  PARTITION_STRATEGY: ":var-time"
   TARGET_PARTITION_MINUTES: 3
   MAX_PARTITIONS: 10
   DEFAULT_PARTITIONS: 5
@@ -126,8 +127,7 @@ jobs:
             --write-profiling-file current-kaocha-profiling-${{ strategy.job-index }}.edn \
             --partition-index ${{ strategy.job-index }} \
             --partitions ${{ strategy.job-total }} \
-            --partition-strategy :var-time \
-            --max-partitions ${{ env.MAX_PARTITIONS }}
+            --partition-strategy ${{ env.PARTITION_STRATEGY }}
       - name: Upload profiling results
         if: always()
         uses: actions/upload-artifact@v4
@@ -170,7 +170,8 @@ jobs:
         run: |
           ./bin/kaocha-bb --combine-partitioned-results \
             '{:result-files ["current-kaocha-profiling-*.edn"]
-            :target-partition-minutes ${{ env.TARGET_PARTITION_MINUTES }} \
+              :target-partition-minutes ${{ env.TARGET_PARTITION_MINUTES }} \
+              :partition-strategy ${{ env.PARTITION_STRATEGY }}
               :output-file "kaocha-profiling.edn"}'
       - name: Update Profiling Cache
         id: profiling
