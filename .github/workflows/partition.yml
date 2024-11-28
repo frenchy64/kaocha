@@ -129,7 +129,6 @@ jobs:
           path: current-kaocha-profiling-${{ strategy.job-index }}.edn
   result:
     timeout-minutes: 5
-    # TODO fail if test fails
     if: ${{!cancelled() && needs.setup.result == 'success'}}
     runs-on: ubuntu-latest
     needs: [setup, test]
@@ -149,7 +148,7 @@ jobs:
       - name: Download test timings
         uses: actions/download-artifact@v4
         with:
-          pattern: current-kaocha-profiling-*.edn
+          pattern: current-kaocha-profiling-*
           merge-multiple: true
       - name: Combine results
         run: |
