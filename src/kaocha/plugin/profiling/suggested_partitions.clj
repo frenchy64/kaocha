@@ -18,7 +18,7 @@
     (min (or suggested-partitions default-partitions)
          max-partitions)))
 
-(defn set-github-actions-output [{:github-actions/keys [set-matrix-output debug] :as m} npartitions]
+(defn- set-github-actions-output [{:github-actions/keys [set-matrix-output debug] :as m} npartitions]
   (when set-matrix-output
     (-> npartitions range json/encode
         (as-> $ (spit (System/getenv "GITHUB_OUTPUT")
@@ -37,7 +37,7 @@
         :partitions npartitions))
     0))
 
-(defn parse+run [& args]
+(defn- parse+run [& args]
   (when (not= 1 (count args))
     (throw (ex-info "Must provide 1 map argument: '{:input-file \"profiling1.edn\" :default-partitions 5 :max-partitions 10}'" {})))
   (run (edn/read-string (first args))))
