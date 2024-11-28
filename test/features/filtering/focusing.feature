@@ -60,7 +60,7 @@ Feature: Focusing on specific tests
     Then the output should contain:
       """
       --- unit (clojure.test) ---------------------------
-      m.project.sample-test
+      my.project.sample-test
         other-test
 
       1 tests, 1 assertions, 0 failures.
