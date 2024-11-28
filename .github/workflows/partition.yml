@@ -134,7 +134,8 @@ jobs:
             --partitions ${{ strategy.job-total }} \
             --partition-strategy ${{ env.PARTITION_STRATEGY }} \
             --plugin kaocha.plugin/junit-xml \
-            --junit-xml-file "junit-${{ strategy.job-index }}.xml"
+            --junit-xml-file "junit-${{ strategy.job-index }}.xml" \
+            --junit-xml-add-location-metadata
       - name: Upload profiling results
         if: always()
         uses: actions/upload-artifact@v4
