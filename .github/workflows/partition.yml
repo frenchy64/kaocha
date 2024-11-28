@@ -74,11 +74,11 @@ jobs:
       - name: Setup matrix partitions
         id: test-partitions
         run: |
-          bin/koacha-bb --print-suggested-partitions '{:input-file "kaocha-profiling.edn"
-                                                       :default-partitions ${{ env.DEFAULT_PARTITIONS }}
-                                                       :max-partitions ${{ env.MAX_PARTITIONS }}
-                                                       :debug "debug-suggested-partitions.txt"
-                                                       :github-actions/set-matrix-output "test-partitions"}'
+          ./bin/koacha-bb --print-suggested-partitions '{:input-file "kaocha-profiling.edn"
+                                                         :default-partitions ${{ env.DEFAULT_PARTITIONS }}
+                                                         :max-partitions ${{ env.MAX_PARTITIONS }}
+                                                         :debug "debug-suggested-partitions.txt"
+                                                         :github-actions/set-matrix-output "test-partitions"}'
           cat debug-suggested-partitions.txt
       - name: Share profiling results with tests
         uses: actions/upload-artifact@v4
@@ -150,7 +150,7 @@ jobs:
           pattern: current-kaocha-profiling-*.edn
           merge-multiple: true
       - name: Combine results
-        run: bin/kaocha-bb --combine-partitioned-results '{:result-files ["current-kaocha-profiling-*.edn"] :output-file "kaocha-profiling.edn"}'
+        run: ./bin/kaocha-bb --combine-partitioned-results '{:result-files ["current-kaocha-profiling-*.edn"] :output-file "kaocha-profiling.edn"}'
       - name: Update Profiling Cache
         id: profiling
         uses: actions/cache/save@v4
