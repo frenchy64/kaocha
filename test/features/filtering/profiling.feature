@@ -42,5 +42,5 @@ Feature: Profiling tests
     Then the exit-code should be 0
     And the output should contain:
       """
-      DELETE ME fast-test was faster than slow-test
+      fast-test was faster than slow-test
       """
