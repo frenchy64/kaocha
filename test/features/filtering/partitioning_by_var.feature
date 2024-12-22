@@ -29,7 +29,7 @@ Feature: Partitioning tests by var for load balancing
       """
 
   Scenario: Running tests on the first machine of two.
-    When I run `bin/kaocha --seed 0 --partition-index 0 --partitions 2 --partition-strategy :var --reporter documentation`
+    When I run `bin/kaocha --plugin partition --seed 0 --partition-index 0 --partitions 2 --partition-strategy :var --reporter documentation`
     Then the output should contain:
       """
       --- unit (clojure.test) ---------------------------

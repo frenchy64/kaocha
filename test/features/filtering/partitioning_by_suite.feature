@@ -66,14 +66,14 @@ Feature: Partitioning tests by suite for load balancing
       """
 
   Scenario: Running tests on the first machine of two runs :asuite.
-    When I run `bin/kaocha --seed 0 --partition-index 0 --partitions 2 --partition-strategy :suite --reporter documentation`
+    When I run `bin/kaocha --plugin partition --seed 0 --partition-index 0 --partitions 2 --partition-strategy :suite --reporter documentation`
     Then the output should contain:
       """
       6 tests, 660 assertions, 0 failures.
       """
 
   Scenario: Running tests on the second machine of two runs :bsuite.
-    When I run `bin/kaocha --seed 0 --partition-index 1 --partitions 2 --partition-strategy :suite --reporter documentation`
+    When I run `bin/kaocha --plugin partition --seed 0 --partition-index 1 --partitions 2 --partition-strategy :suite --reporter documentation`
     Then the output should contain:
       """
       4 tests, 104 assertions, 0 failures.

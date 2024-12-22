@@ -20,7 +20,7 @@ Feature: Partitioning tests automatically for load balancing
       """
 
   Scenario: Running tests on the first machine of two.
-    When I run `bin/kaocha --partition-index 0 --partitions 2 --reporter documentation`
+    When I run `bin/kaocha --plugin partition --partition-index 0 --partitions 2 --reporter documentation`
     Then the output should contain:
       """
       --- unit (clojure.test) ---------------------------
@@ -31,7 +31,7 @@ Feature: Partitioning tests automatically for load balancing
       """
 
   Scenario: Running tests on the second machine of two.
-    When I run `bin/kaocha --partition-index 1 --partitions 2  --reporter documentation`
+    When I run `bin/kaocha --plugin partition --partition-index 1 --partitions 2  --reporter documentation`
     Then the output should contain:
       """
       --- unit (clojure.test) ---------------------------
