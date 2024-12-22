@@ -67,13 +67,20 @@
        vec))
 
 (defn enabled-tests [testable]
-  (if (::testable/skip testable)
-    []
-    (if (hierarchy/leaf? testable)
-      [(:kaocha.testable/id testable)]
-      (mapcat enabled-tests (or (:kaocha/tests testable)
-                                (:kaocha.test-plan/tests testable)
-                                (:kaocha.result/tests testable))))))
+  (let [enabled-tests (fn enabled-tests [testable]
+                        (if (::testable/skip testable)
+                          []
+                          (if (hierarchy/leaf? testable)
+                            [(:kaocha.testable/id testable)]
+                            (into [] (mapcat enabled-tests)
+                                  (or (:kaocha/tests testable)
+                                      (:kaocha.test-plan/tests testable)
+                                      (:kaocha.result/tests testable))))))]
+    (->> testable
+         enabled-tests 
+         ;; we sort to be resilient to test randomization happening before this plugin runs.
+         sort
+         vec)))
 
 (defn record-enabled-tests [config]
   (update config ::expected-enabled-tests #(if %
