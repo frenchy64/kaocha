@@ -53,15 +53,16 @@
        (nth partition-index))))
 
 (defn enabled-tests [test-plan]
-  (let [enabled-tests (fn enabled-tests [testable]
-                        (if (::testable/skip testable)
-                          []
-                          (if-some [tests (:kaocha.test-plan/tests testable)]
-                            (mapcat enabled-tests tests)
-                            (cond-> []
-                              (and (map? testable) (:kaocha.testable/id testable))
-                              (conj (:kaocha.testable/id testable))))))]
-    (-> test-plan enabled-tests sort vec)))
+  (->> test-plan
+       testable/test-seq 
+       (map :kaocha.testable/id)
+       sort
+       vec))
+
+(defn record-enabled-tests [config]
+  (update config ::expected-enabled-tests #(if %
+                                             (throw (ex-info "Already recorded enabled tests" {}))
+                                             (enabled-tests config))))
 
 (defn partition-suites-by-suite [{{:keys [partition-strategy partition-index partitions]} ::partition
                                   suites :kaocha/tests :as config}]
@@ -81,10 +82,9 @@
                                   (not (suites-for-this-partition (:kaocha.testable/id suite)))
                                   (assoc :kaocha.testable/skip true)))
                               suites)]
-             (assoc config
-                    :kaocha/tests suites
-                    ;; save to check after
-                    ::suites-for-this-partition suites-for-this-partition))
+             (-> config
+                 (assoc :kaocha/tests suites)
+                 record-enabled-tests))
     config))
 
 ;;perhaps profiling plugin could assoc prior results into the actual test-plan
@@ -119,15 +119,14 @@
                           (skip-tests test-ids-to-skip)))))
     test-plan))
 
-(defn record-enabled-tests [config]
-  (update config ::expected-enabled-tests #(if %
-                                             (throw (ex-info "Already recorded enabled tests" {}))
-                                             (enabled-tests config))))
-
 (defn assert-deterministic-partitioning [{::keys [expected-enabled-tests] :as config}]
-  (when expected-enabled-tests
-    (when-not (= expected-enabled-tests (enabled-tests config))
-      (throw (ex-info "Nondeterministic test partitioning detected" {})))))
+  (when (::partition config)
+    (let [actual-enabled-tests (enabled-tests config)]
+      (when-not (= expected-enabled-tests actual-enabled-tests)
+        (throw (ex-info "Nondeterministic test partitioning detected"
+                        {:keys (keys config)
+                         :expected expected-enabled-tests
+                         :actual actual-enabled-tests}))))))
 
 (defn partition-test-plan-by-test [{{:keys [partition-strategy partition-index partitions]} ::partition :as test-plan}]
   (case partition-strategy

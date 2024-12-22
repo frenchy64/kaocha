@@ -10,7 +10,7 @@ Feature: Partitioning tests by var time for load balancing
     Given a file named "tests.edn" with:
       """ edn
       #kaocha/v1
-      {:plugins [:profiling]
+      {:plugins [:profiling :partition]
        :color? false
        :reporter kaocha.report/documentation}
       """
@@ -58,7 +58,7 @@ Feature: Partitioning tests by var time for load balancing
       """
 
   Scenario: Running tests on the first machine of two without prior timing.
-    When I run `bin/kaocha --plugin partition --no-randomize --partition-index 0 --partitions 2 --partition-strategy :var-time --write-profiling-file current-kaocha-profiling-0.edn`
+    When I run `bin/kaocha --no-randomize --partition-index 0 --partitions 2 --partition-strategy :var-time --write-profiling-file current-kaocha-profiling-0.edn`
     Then the output should contain:
       """ text
       --- unit (clojure.test) ---------------------------
@@ -77,7 +77,7 @@ Feature: Partitioning tests by var time for load balancing
       """
 
   Scenario: Running tests on the second machine of two without prior timing.
-    When I run `bin/kaocha --plugin partition --no-randomize --partition-index 1 --partitions 2 --partition-strategy :var-time --write-profiling-file current-kaocha-profiling-1.edn`
+    When I run `bin/kaocha --no-randomize --partition-index 1 --partitions 2 --partition-strategy :var-time --write-profiling-file current-kaocha-profiling-1.edn`
     Then the output should contain:
       """ text
       --- unit (clojure.test) ---------------------------
@@ -96,7 +96,7 @@ Feature: Partitioning tests by var time for load balancing
       """
 
   Scenario: Running tests on the first machine of two with prior timing.
-    When I run `bin/kaocha --plugin partition --no-randomize --partition-index 0 --partitions 2 --partition-strategy :var-time --read-profiling-file kaocha-profiling.edn`
+    When I run `bin/kaocha --no-randomize --partition-index 0 --partitions 2 --partition-strategy :var-time --read-profiling-file kaocha-profiling.edn`
     Then the output should contain:
       """ text
       --- unit (clojure.test) ---------------------------
@@ -107,7 +107,7 @@ Feature: Partitioning tests by var time for load balancing
       """
 
   Scenario: Running tests on the second machine of two with prior timing.
-    When I run `bin/kaocha --plugin partition --no-randomize --partition-index 1 --partitions 2 --partition-strategy :var-time --read-profiling-file kaocha-profiling.edn`
+    When I run `bin/kaocha --no-randomize --partition-index 1 --partitions 2 --partition-strategy :var-time --read-profiling-file kaocha-profiling.edn`
     Then the output should contain:
       """ text
       --- unit (clojure.test) ---------------------------
