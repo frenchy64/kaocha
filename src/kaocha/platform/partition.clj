@@ -1,0 +1,184 @@
+(ns kaocha.plugin.partition
+  (:require [kaocha.plugin :as plugin :refer [defplugin]]
+            [kaocha.result :as result]
+            [kaocha.testable :as testable]))
+
+(defn weighted-partition
+  "Partition collection into npartitions partitions. Will attempt
+  to create equally weighted partitions according to weights (weights
+  defaults to 1 for all elements). Partitions are reproducible but
+  the order of items in coll is not preserved."
+  ([npartitions coll] (weighted-partition npartitions coll nil))
+  ([npartitions coll weights]
+   {:pre [(pos-int? npartitions)
+          (vector? coll)
+          (or (nil? weights)
+              (vector? weights))]}
+   (let [weights (or weights (into [] (repeat (count coll) 1)))
+         _ (assert (= (count coll) (count weights)))
+         heaviest (reduce-kv (fn [m k v]
+                               (update m v (fnil conj []) k))
+                             (sorted-map-by (comp - compare)) weights)
+         ;; allocate largest weighing remaining element to the smallest weighing partition (left-most if tied)
+         partitioned (reduce (fn [acc idx]
+                               (let [idx-weight (weights idx)
+                                     smallest-partition (apply min-key :weight
+                                                               ;; maintain order for equal weights
+                                                               (rseq acc))]
+                                 (update acc (:partition-idx smallest-partition)
+                                         (fn [p]
+                                           (-> p
+                                               (update :partition-indices conj idx)
+                                               (update :partition conj (nth coll idx))
+                                               (update :weight +' idx-weight))))))
+                             (mapv #(do {:partition-idx %
+                                         :partition-indices []
+                                         :partition []
+                                         :weight 0})
+                                   (range npartitions))
+                             (mapcat identity (vals heaviest)))
+         partitions (mapv :partition partitioned)]
+     (assert (= (apply + (map count partitions)) (count coll))
+             [partitions coll])
+     (assert (= (sort (mapcat :partition-indices partitioned))
+                (range (count coll))))
+     (assert (every? (zipmap coll (repeat true)) (mapcat identity partitions)))
+     partitions)))
+
+(defn nth-weighted-partition
+  ([partition-index npartitions coll]
+   (nth-weighted-partition partition-index npartitions coll nil))
+  ([partition-index npartitions coll weights]
+   (-> (weighted-partition npartitions coll weights)
+       (nth partition-index))))
+
+(defn partition-suites-by-suite [{:keys [partition-strategy partition-index partitions]} suites]
+  (case partition-strategy
+    ;;TODO :suite-time
+    :suite (let [enabled-suites (->> suites
+                                     (keep-indexed
+                                       (fn [i suite]
+                                         (when-not (:kaocha.testable/skip suite)
+                                           (:kaocha.testable/id suite))))
+                                     ;; must be sorted!
+                                     sort
+                                     vec)
+                 suites-for-this-partition (set (nth-weighted-partition partition-index partitions enabled-suites))]
+             (mapv (fn [suite]
+                     (cond-> suite
+                       (not (suites-for-this-partition (:kaocha.testable/id suite)))
+                       (assoc :kaocha.testable/skip true)))
+                   suites))
+    suites))
+
+;;perhaps profiling plugin could assoc prior results into the actual test-plan
+(defn test-weights [{:kaocha.plugin.profiling/keys [prior-profiling] :as test-plan}
+                    enabled-test-ids]
+  (if-not prior-profiling
+    (println "Should provide profiling results via --read-profiling-file with :kaocha.plugin/profiling plugin, none found.")
+    (let [var->duration (not-empty
+                          (into {} (map (fn [[k v]]
+                                          (assert (map? v))
+                                          (let [weight (:kaocha.plugin.profiling/duration v)]
+                                            (assert (<= 0 weight) (pr-str weight))
+                                            [k weight])))
+                                (-> prior-profiling :results :kaocha.type/var)))
+          average-duration (when var->duration
+                             (/ (apply +' (vals var->duration)) (count var->duration)))
+          default-duration (or average-duration 1)]
+      (into {} (map (fn [id]
+                      [id (get var->duration id default-duration)]))
+            enabled-test-ids))))
+
+(defn- skip-tests [test-plan test-ids-to-skip]
+  {:pre [(set? test-ids-to-skip)]}
+  (if-some [tests (:kaocha.test-plan/tests test-plan)]
+    (assoc test-plan
+           :kaocha.test-plan/tests
+           (->> tests
+                (map #(-> %
+                          (cond->
+                            (test-ids-to-skip (:kaocha.testable/id %))
+                            (assoc :kaocha.testable/skip true))
+                          (skip-tests test-ids-to-skip)))))
+    test-plan))
+
+(defn enabled-tests [testable]
+  (if (::testable/skip testable)
+    []
+    (if-some [tests (:kaocha.test-plan/tests testable)]
+      (mapcat enabled-tests tests)
+      (cond-> []
+        (and (map? testable) (:kaocha.testable/id testable))
+        (conj (:kaocha.testable/id testable))))))
+
+(defn partition-test-plan-by-test [test-plan {:keys [partition-strategy partition-index partitions] :as partition-conf}]
+  (case partition-strategy
+    ;;TODO :ns, :ns-time
+    (:var :var-time)
+    (let [;; must be sorted!
+          enabled-ids (-> test-plan enabled-tests sort vec)
+          id->weight (case partition-strategy
+                       :var-time (test-weights test-plan enabled-ids)
+                       :var nil)
+          test-plan (cond-> test-plan
+                      id->weight (assoc ::id->weight id->weight))
+          test-ids-to-skip (into #{} cat
+                                 (assoc (weighted-partition partitions enabled-ids (some-> id->weight (mapv enabled-ids)))
+                                        partition-index []))]
+      (skip-tests test-plan test-ids-to-skip))
+    test-plan))
+
+;;TODO must run after kaocha.plugin/filter
+(defplugin kaocha.plugin/partition
+  (cli-options [opts]
+    (let [parse #(keyword (if (= \: (first %)) (subs % 1) %))
+          parse-int #(Integer/parseInt %)
+          assoc-partition-config (fn [m k v] (assoc-in m [:kaocha.filter/partition k] v))]
+      (conj opts
+            [nil  "--partition-index NAT-INT"    "Zero-based index of the partition of the test suite to run."
+             :parse-fn parse-int]
+            [nil  "--partitions POS-INT"         "The number of partitions to divide the test suite into."
+             :parse-fn parse-int]
+            [nil  "--partition-strategy STRING"
+             "Approach to partition tests by. :suite by test suite, :var{-time} by var {timing}. Chooses fastest strategy by default."
+             :parse-fn (comp #(do (assert (#{:var :var-time :suite} %) (str "Bad --partition-strategy: " (pr-str %)))
+                                  %)
+                             parse)]
+            [nil  "--target-partition-minutes NUMBER"  "Target number of minutes in which to run all tests. Use to partition future runs."
+             :parse-fn parse-int]
+            [nil  "--max-partitions NUMBER"  "Maximum number of partitions to use in order meet --partition-target-minutes. Default: 10"
+             :parse-fn parse-int])))
+
+  (config [config]
+    (let [{:keys [partitions partition-index partition-strategy target-partition-minutes max-partitions]} (:kaocha/cli-options config)
+          choose-partition (when (or partition-index partitions)
+                             (fn [config]
+                               ;;TODO assert at parse time
+                               (when-not (and partition-index partitions)
+                                 (throw (ex-info "Must provide --partition-index and --partition together"
+                                                 {})))
+                               (when-not (pos? partitions)
+                                 (throw (ex-info "--partitions must be positive"
+                                                 {})))
+                               (when-not (and (<= 0 partition-index)
+                                              (< partition-index partitions))
+                                 (throw (ex-info "--partition-index must be non-negative and less than --partitions"
+                                                 {})))
+                               ;;TODO group at parse time?
+                               (assoc config :kaocha.filter/partition
+                                      {:partition-strategy (or partition-strategy
+                                                               ;;TODO choose fastest strategy based on test-plan and/or timings
+                                                               :var)
+                                       :partition-index partition-index
+                                       :partitions partitions
+                                       :target-partition-minutes target-partition-minutes
+                                       :max-partitions (or max-partitions 10)})))]
+      (cond-> config
+        choose-partition choose-partition)))
+  (pre-load [config] (update config :kaocha/tests #(partition-suites-by-suite (:kaocha.filter/partition config) %)))
+  (post-load [test-plan] (partition-test-plan-by-test (:kaocha.filter/partition test-plan) test-plan))
+  (post-run [{{:keys [partition-strategy]} :kaocha.filter/partition ::keys [id->weight] :as test-plan}]
+    (when (and (= :var-time partition-strategy) id->weight (result/failed? test-plan))
+      (print "\nPartitioned vars with weights " (pr-str id->weight)))
+    test-plan))
