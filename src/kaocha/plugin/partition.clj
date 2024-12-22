@@ -1,5 +1,6 @@
 (ns kaocha.plugin.partition
   (:require [clojure.edn :as edn]
+            [kaocha.hierarchy :as hierarchy]
             [kaocha.plugin :as plugin :refer [defplugin]]
             [kaocha.output :as output]
             [kaocha.result :as result]
@@ -57,12 +58,22 @@
    (-> (weighted-partition npartitions coll weights)
        (nth partition-index))))
 
+#_
 (defn enabled-tests [test-plan]
   (->> test-plan
        testable/test-seq 
        (map ::testable/id)
        sort
        vec))
+
+(defn enabled-tests [testable]
+  (if (::testable/skip testable)
+    []
+    (if (hierarchy/leaf? testable)
+      [(:kaocha.testable/id testable)]
+      (mapcat enabled-tests (or (:kaocha/tests testable)
+                                (:kaocha.test-plan/tests testable)
+                                (:kaocha.result/tests testable))))))
 
 (defn record-enabled-tests [config]
   (update config ::expected-enabled-tests #(if %
@@ -73,7 +84,8 @@
                                   suites :kaocha/tests :as config}]
   (case partition-strategy
     ;;TODO :suite-time
-    :suite (let [enabled-suites (->> suites
+    :suite (let [;;FIXME use `hierarchy/suite?`
+                 enabled-suites (->> suites
                                      (keep #(when-not (::testable/skip %)
                                               (::testable/id %)))
                                      ;; must be sorted!
