@@ -69,10 +69,8 @@
   (case partition-strategy
     ;;TODO :suite-time
     :suite (let [enabled-suites (->> suites
-                                     (keep-indexed
-                                       (fn [i suite]
-                                         (when-not (:kaocha.testable/skip suite)
-                                           (:kaocha.testable/id suite))))
+                                     (keep #(when-not (:kaocha.testable/skip %)
+                                              (:kaocha.testable/id %)))
                                      ;; must be sorted!
                                      sort
                                      vec)
