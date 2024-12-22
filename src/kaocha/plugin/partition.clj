@@ -1,7 +1,12 @@
 (ns kaocha.plugin.partition
-  (:require [kaocha.plugin :as plugin :refer [defplugin]]
+  (:require [clojure.edn :as edn]
+            [kaocha.plugin :as plugin :refer [defplugin]]
+            [kaocha.output :as output]
             [kaocha.result :as result]
-            [kaocha.testable :as testable]))
+            [kaocha.plugin.profiling.suggested-partitions :as suggested-partitions]
+            [kaocha.plugin.profiling.combine-results :as combine-results]
+            [kaocha.testable :as testable]
+            [slingshot.slingshot :refer [throw+]]))
 
 (defn weighted-partition
   "Partition collection into npartitions partitions. Will attempt
@@ -55,7 +60,7 @@
 (defn enabled-tests [test-plan]
   (->> test-plan
        testable/test-seq 
-       (map :kaocha.testable/id)
+       (map ::testable/id)
        sort
        vec))
 
@@ -69,16 +74,16 @@
   (case partition-strategy
     ;;TODO :suite-time
     :suite (let [enabled-suites (->> suites
-                                     (keep #(when-not (:kaocha.testable/skip %)
-                                              (:kaocha.testable/id %)))
+                                     (keep #(when-not (::testable/skip %)
+                                              (::testable/id %)))
                                      ;; must be sorted!
                                      sort
                                      vec)
                  suites-for-this-partition (set (nth-weighted-partition partition-index partitions enabled-suites))
                  suites (mapv (fn [suite]
                                 (cond-> suite
-                                  (not (suites-for-this-partition (:kaocha.testable/id suite)))
-                                  (assoc :kaocha.testable/skip true)))
+                                  (not (suites-for-this-partition (::testable/id suite)))
+                                  (assoc ::testable/skip true)))
                               suites)]
              (-> config
                  (assoc :kaocha/tests suites)
@@ -112,8 +117,8 @@
            (->> tests
                 (map #(-> %
                           (cond->
-                            (test-ids-to-skip (:kaocha.testable/id %))
-                            (assoc :kaocha.testable/skip true))
+                            (test-ids-to-skip (::testable/id %))
+                            (assoc ::testable/skip true))
                           (skip-tests test-ids-to-skip)))))
     test-plan))
 
@@ -146,12 +151,29 @@
 
 ;;TODO must run after kaocha.plugin/filter
 (defplugin kaocha.plugin/partition
-  ;(main [config])
+  (main [config]
+    (cond
+      (:print-suggested-partitions config) (suggested-partitions/run (:print-suggested-partitions config))
+      (:combine-partitioned-results config) (combine-results/run (:combine-partitioned-results config))))
   (cli-options [opts]
     (let [parse #(keyword (if (= \: (first %)) (subs % 1) %))
           parse-int #(Integer/parseInt %)
           assoc-partition-config (fn [m k v] (assoc-in m [::partition k] v))]
       (conj opts
+            [nil  "--print-suggested-partitions MAP"  "Print the suggested number of test partitions based on prior timing."
+             :parse-fn (fn [s]
+                         (let [v (edn/read-string s)]
+                           (when-not (map? v)
+                             (output/error "Must provide 1 map argument: --print-suggested-partitions '{:input-file \"profiling1.edn\" :default-partitions 5 :max-partitions 10}'")
+                             (throw+ {:kaocha/early-exit 253}))
+                           v))]
+            [nil  "--combine-partitioned-results MAP"   "Combine and verify results for a partitioned test run."
+             :parse-fn (fn [s]
+                         (let [v (edn/read-string s)]
+                           (when-not (map? v)
+                             (output/error "Must provide 1 map argument: --combine-partitioned-results'")
+                             (throw+ {:kaocha/early-exit 253}))
+                           v))]
             [nil  "--partition-index NAT-INT"    "Zero-based index of the partition of the test suite to run."
              :parse-fn parse-int]
             [nil  "--partitions POS-INT"         "The number of partitions to divide the test suite into."

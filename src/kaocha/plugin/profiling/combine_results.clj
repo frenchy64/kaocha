@@ -1,5 +1,3 @@
-#!/usr/bin/env bb
-;;./src/kaocha/plugin/profiling/combine_results.clj '{:result-files ["profiling.edn"] :output-file "profiling1.edn"}'
 (ns kaocha.plugin.profiling.combine-results
   (:require [clojure.edn :as edn]
             [babashka.fs :as fs]))
@@ -21,21 +19,10 @@
     ;(prn "target-partition-minutes" target-partition-minutes)
     base))
 
-(defn parse+run [& args]
-  (assert (= 1 (count args)) (pr-str args))
-  (let [{:keys [result-files output-file]} (edn/read-string (first args))]
+(defn run [m]
+  (let [{:keys [result-files output-file]} (edn/read-string m)]
     (spit output-file (binding [*print-length* nil
                                 *print-level* nil
                                 *print-namespace-maps* false]
                         (pr-str (combine-results result-files))))
     0))
-
-(defn -main [& args]
-  (try (System/exit (apply parse+run args)) 
-       (catch Throwable e
-         (.printStackTrace e)
-         (System/exit 1))
-       (finally (System/exit 1))))
-
-(when (= *file* (System/getProperty "babashka.file"))
-  (apply -main *command-line-args*))

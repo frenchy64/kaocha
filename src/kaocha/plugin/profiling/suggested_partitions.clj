@@ -1,10 +1,7 @@
-#!/usr/bin/env bb
-;; bb -m kaocha.plugin.profiling.suggested-partitions '{:input-file "profiling1.edn" :default-partitions 5 :max-partitions 10}'
-;; => 1
-
 (ns kaocha.plugin.profiling.suggested-partitions
   (:require [clojure.edn :as edn]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [kaocha.output :as output]))
 
 (defn- dbg [{:keys [debug] :as m} msg]
   (some-> debug (spit (str msg "\n") :append true)))
@@ -66,18 +63,3 @@
         :github-actions/json-matrix (json-matrix npartitions)
         :partitions npartitions))
     0))
-
-(defn parse+run [& args]
-  (when (not= 1 (count args))
-    (throw (ex-info "Must provide 1 map argument: '{:input-file \"profiling1.edn\" :default-partitions 5 :max-partitions 10}'" {})))
-  (run (assoc (edn/read-string (first args)) :args args)))
-
-(defn -main [& args]
-  (try (System/exit (apply parse+run args))
-       (catch Throwable e
-         (.printStackTrace e)
-         (System/exit 1))
-       (finally (System/exit 1))))
-
-(when (= *file* (System/getProperty "babashka.file"))
-  (apply -main *command-line-args*))
