@@ -76,7 +76,7 @@ jobs:
       - name: Setup matrix partitions
         id: test-partitions
         run: |
-          ./bin/kaocha-bb --print-suggested-partitions \
+          ./bin/kaocha-bb --plugin profiling --print-suggested-partitions \
             '{:input-file "kaocha-profiling.edn"
               :target-partition-minutes ${{ env.TARGET_PARTITION_MINUTES }}
               :default-partitions ${{ env.DEFAULT_PARTITIONS }}
@@ -179,7 +179,7 @@ jobs:
         run: cat current-kaocha-profiling-*.edn
       - name: Combine results
         run: |
-          ./bin/kaocha-bb --combine-partitioned-results \
+          ./bin/kaocha-bb --plugin profiling --combine-partitioned-results \
             '{:result-files ["current-kaocha-profiling-*.edn"]
               :output-file "kaocha-profiling.edn"}'
       - name: Update Profiling Cache
