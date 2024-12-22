@@ -52,7 +52,19 @@
    (-> (weighted-partition npartitions coll weights)
        (nth partition-index))))
 
-(defn partition-suites-by-suite [{:keys [partition-strategy partition-index partitions]} suites]
+(defn enabled-tests [test-plan]
+  (let [enabled-tests (fn enabled-tests [testable]
+                        (if (::testable/skip testable)
+                          []
+                          (if-some [tests (:kaocha.test-plan/tests testable)]
+                            (mapcat enabled-tests tests)
+                            (cond-> []
+                              (and (map? testable) (:kaocha.testable/id testable))
+                              (conj (:kaocha.testable/id testable))))))]
+    (-> test-plan enabled-tests sort vec)))
+
+(defn partition-suites-by-suite [{{:keys [partition-strategy partition-index partitions]} ::partition
+                                  suites :kaocha/tests :as config}]
   (case partition-strategy
     ;;TODO :suite-time
     :suite (let [enabled-suites (->> suites
@@ -63,13 +75,17 @@
                                      ;; must be sorted!
                                      sort
                                      vec)
-                 suites-for-this-partition (set (nth-weighted-partition partition-index partitions enabled-suites))]
-             (mapv (fn [suite]
-                     (cond-> suite
-                       (not (suites-for-this-partition (:kaocha.testable/id suite)))
-                       (assoc :kaocha.testable/skip true)))
-                   suites))
-    suites))
+                 suites-for-this-partition (set (nth-weighted-partition partition-index partitions enabled-suites))
+                 suites (mapv (fn [suite]
+                                (cond-> suite
+                                  (not (suites-for-this-partition (:kaocha.testable/id suite)))
+                                  (assoc :kaocha.testable/skip true)))
+                              suites)]
+             (assoc config
+                    :kaocha/tests suites
+                    ;; save to check after
+                    ::suites-for-this-partition suites-for-this-partition))
+    config))
 
 ;;perhaps profiling plugin could assoc prior results into the actual test-plan
 (defn test-weights [{:kaocha.plugin.profiling/keys [prior-profiling] :as test-plan}
@@ -103,21 +119,22 @@
                           (skip-tests test-ids-to-skip)))))
     test-plan))
 
-(defn enabled-tests [testable]
-  (if (::testable/skip testable)
-    []
-    (if-some [tests (:kaocha.test-plan/tests testable)]
-      (mapcat enabled-tests tests)
-      (cond-> []
-        (and (map? testable) (:kaocha.testable/id testable))
-        (conj (:kaocha.testable/id testable))))))
+(defn record-enabled-tests [config]
+  (update config ::expected-enabled-tests #(if %
+                                             (throw (ex-info "Already recorded enabled tests" {}))
+                                             (enabled-tests config))))
 
-(defn partition-test-plan-by-test [test-plan {:keys [partition-strategy partition-index partitions] :as partition-conf}]
+(defn assert-deterministic-partitioning [{::keys [expected-enabled-tests] :as config}]
+  (when expected-enabled-tests
+    (when-not (= expected-enabled-tests (enabled-tests config))
+      (throw (ex-info "Nondeterministic test partitioning detected" {})))))
+
+(defn partition-test-plan-by-test [{{:keys [partition-strategy partition-index partitions]} ::partition :as test-plan}]
   (case partition-strategy
     ;;TODO :ns, :ns-time
     (:var :var-time)
     (let [;; must be sorted!
-          enabled-ids (-> test-plan enabled-tests sort vec)
+          enabled-ids (enabled-tests test-plan)
           id->weight (case partition-strategy
                        :var-time (test-weights test-plan enabled-ids)
                        :var nil)
@@ -125,16 +142,18 @@
                       id->weight (assoc ::id->weight id->weight))
           test-ids-to-skip (into #{} cat
                                  (assoc (weighted-partition partitions enabled-ids (some-> id->weight (mapv enabled-ids)))
-                                        partition-index []))]
-      (skip-tests test-plan test-ids-to-skip))
+                                        partition-index []))
+          test-plan (skip-tests test-plan test-ids-to-skip)]
+      (record-enabled-tests test-plan))
     test-plan))
 
 ;;TODO must run after kaocha.plugin/filter
 (defplugin kaocha.plugin/partition
+  ;(main [config])
   (cli-options [opts]
     (let [parse #(keyword (if (= \: (first %)) (subs % 1) %))
           parse-int #(Integer/parseInt %)
-          assoc-partition-config (fn [m k v] (assoc-in m [:kaocha.filter/partition k] v))]
+          assoc-partition-config (fn [m k v] (assoc-in m [::partition k] v))]
       (conj opts
             [nil  "--partition-index NAT-INT"    "Zero-based index of the partition of the test suite to run."
              :parse-fn parse-int]
@@ -166,7 +185,7 @@
                                  (throw (ex-info "--partition-index must be non-negative and less than --partitions"
                                                  {})))
                                ;;TODO group at parse time?
-                               (assoc config :kaocha.filter/partition
+                               (assoc config ::partition
                                       {:partition-strategy (or partition-strategy
                                                                ;;TODO choose fastest strategy based on test-plan and/or timings
                                                                :var)
@@ -176,9 +195,10 @@
                                        :max-partitions (or max-partitions 10)})))]
       (cond-> config
         choose-partition choose-partition)))
-  (pre-load [config] (update config :kaocha/tests #(partition-suites-by-suite (:kaocha.filter/partition config) %)))
-  (post-load [test-plan] (partition-test-plan-by-test (:kaocha.filter/partition test-plan) test-plan))
-  (post-run [{{:keys [partition-strategy]} :kaocha.filter/partition ::keys [id->weight] :as test-plan}]
+  (pre-load [config] (partition-suites-by-suite config))
+  (post-load [test-plan] (partition-test-plan-by-test test-plan))
+  (post-run [{{:keys [partition-strategy]} ::partition ::keys [id->weight suites-for-this-partition] :as test-plan}]
+    (assert-deterministic-partitioning test-plan)
     (when (and (= :var-time partition-strategy) id->weight (result/failed? test-plan))
       (print "\nPartitioned vars with weights " (pr-str id->weight)))
     test-plan))
