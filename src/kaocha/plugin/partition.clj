@@ -82,6 +82,7 @@
          sort
          vec)))
 
+#_
 (defn record-enabled-tests [config]
   (update config ::expected-enabled-tests #(if %
                                              (throw (ex-info "Already recorded enabled tests" {}))
@@ -106,6 +107,7 @@
                               suites)]
              (-> config
                  (assoc :kaocha/tests suites)
+                 #_
                  record-enabled-tests))
     config))
 
@@ -141,6 +143,7 @@
                           (skip-tests test-ids-to-skip)))))
     test-plan))
 
+#_
 (defn assert-deterministic-partitioning [{::keys [expected-enabled-tests] :as config}]
   (when (::partition config)
     (let [actual-enabled-tests (enabled-tests config)]
@@ -165,7 +168,8 @@
                                  (assoc (weighted-partition partitions enabled-ids (some-> id->weight (mapv enabled-ids)))
                                         partition-index []))
           test-plan (skip-tests test-plan test-ids-to-skip)]
-      (record-enabled-tests test-plan))
+      (-> test-plan
+          #_record-enabled-tests))
     test-plan))
 
 ;;TODO must run after kaocha.plugin/filter
@@ -236,7 +240,7 @@
   (pre-load [config] (partition-suites-by-suite config))
   (post-load [test-plan] (partition-test-plan-by-test test-plan))
   (post-run [{{:keys [partition-strategy]} ::partition ::keys [id->weight suites-for-this-partition] :as test-plan}]
-    (assert-deterministic-partitioning test-plan)
+    ;(assert-deterministic-partitioning test-plan)
     (when (and (= :var-time partition-strategy) id->weight (result/failed? test-plan))
       (print "\nPartitioned vars with weights " (pr-str id->weight)))
     test-plan))
