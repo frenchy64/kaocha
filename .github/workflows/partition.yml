@@ -75,8 +75,8 @@ jobs:
 
       - name: Setup matrix partitions
         id: test-partitions
-        run: |-
-          ./bin/kaocha-bb --plugin partition --print-suggested-partitions
+        run: |
+          ./bin/kaocha-bb --plugin partition --print-suggested-partitions \
             '{:input-file "kaocha-profiling.edn"
               :target-partition-minutes ${{ env.TARGET_PARTITION_MINUTES }}
               :default-partitions ${{ env.DEFAULT_PARTITIONS }}
@@ -125,15 +125,15 @@ jobs:
           key: cljdeps-${{ env.ACTIONS_CACHE_VERSION }}-${{ hashFiles('deps.edn', 'bb.edn') }}
           fail-on-cache-miss: true
       - name: Run tests
-        run: |-
-          ./bin/kaocha
-            --read-profiling-file kaocha-profiling.edn
-            --write-profiling-file current-kaocha-profiling-${{ strategy.job-index }}.edn
-            --partition-index ${{ strategy.job-index }}
-            --partitions ${{ strategy.job-total }}
-            --partition-strategy ${{ env.PARTITION_STRATEGY }}
-            --plugin kaocha.plugin/junit-xml
-            --junit-xml-file "junit-${{ strategy.job-index }}.xml"
+        run: |
+          ./bin/kaocha \
+            --read-profiling-file kaocha-profiling.edn \
+            --write-profiling-file current-kaocha-profiling-${{ strategy.job-index }}.edn \
+            --partition-index ${{ strategy.job-index }} \
+            --partitions ${{ strategy.job-total }} \
+            --partition-strategy ${{ env.PARTITION_STRATEGY }} \
+            --plugin kaocha.plugin/junit-xml \
+            --junit-xml-file "junit-${{ strategy.job-index }}.xml" \
             --junit-xml-add-location-metadata
       - name: Upload profiling results
         if: always()
@@ -178,8 +178,8 @@ jobs:
       - name: Print test timings
         run: cat current-kaocha-profiling-*.edn
       - name: Combine results
-        run: |-
-          ./bin/kaocha-bb --plugin partition --combine-partitioned-results
+        run: |
+          ./bin/kaocha-bb --plugin partition --combine-partitioned-results \
             '{:result-files ["current-kaocha-profiling-*.edn"]
               :output-file "kaocha-profiling.edn"}'
       - name: Update Profiling Cache
