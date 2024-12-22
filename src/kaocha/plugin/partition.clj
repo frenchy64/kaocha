@@ -58,14 +58,6 @@
    (-> (weighted-partition npartitions coll weights)
        (nth partition-index))))
 
-#_
-(defn enabled-tests [test-plan]
-  (->> test-plan
-       testable/test-seq 
-       (map ::testable/id)
-       sort
-       vec))
-
 (defn enabled-tests [testable]
   (let [enabled-tests (fn enabled-tests [testable]
                         (if (::testable/skip testable)
@@ -81,12 +73,6 @@
          ;; we sort to be resilient to test randomization happening before this plugin runs.
          sort
          vec)))
-
-#_
-(defn record-enabled-tests [config]
-  (update config ::expected-enabled-tests #(if %
-                                             (throw (ex-info "Already recorded enabled tests" {}))
-                                             (enabled-tests config))))
 
 (defn partition-suites-by-suite [{{:keys [partition-strategy partition-index partitions]} ::partition
                                   suites :kaocha/tests :as config}]

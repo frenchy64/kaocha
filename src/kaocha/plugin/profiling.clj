@@ -5,8 +5,7 @@
             [clojure.string :as str]
             [kaocha.plugin :as plugin :refer [defplugin]]
             [kaocha.testable :as testable])
-  (:import java.io.PushbackReader
-           java.time.Instant
+  (:import java.time.Instant
            java.time.temporal.ChronoUnit))
 
 (set! *warn-on-reflection* true)
