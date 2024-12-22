@@ -160,10 +160,10 @@
 
 ;;TODO must run after kaocha.plugin/filter
 (defplugin kaocha.plugin/partition
-  (main [config]
+  (main [{{:keys [print-suggested-partitions combine-partitioned-results]} :kaocha/cli-options}]
     (cond
-      (:print-suggested-partitions config) (suggested-partitions/run (:print-suggested-partitions config))
-      (:combine-partitioned-results config) (combine-results/run (:combine-partitioned-results config))))
+      print-suggested-partitions (suggested-partitions/run print-suggested-partitions)
+      combine-partitioned-results (combine-results/run combine-partitioned-results)))
   (cli-options [opts]
     (let [parse #(keyword (if (= \: (first %)) (subs % 1) %))
           parse-int #(Integer/parseInt %)
@@ -171,6 +171,7 @@
       (conj opts
             [nil  "--print-suggested-partitions MAP"  "Print the suggested number of test partitions based on prior timing."
              :parse-fn (fn [s]
+                         (prn "parsing --print-suggested-partitions" s)
                          (let [v (edn/read-string s)]
                            (when-not (map? v)
                              (output/error "Must provide 1 map argument: --print-suggested-partitions '{:input-file \"profiling1.edn\" :default-partitions 5 :max-partitions 10}'")
