@@ -43,7 +43,7 @@ Feature: Partitioning tests by var for load balancing
       """
 
   Scenario: Running tests on the second machine of two.
-    When I run `bin/kaocha --seed 0 --partition-index 1 --partitions 2 --partition-strategy :var --reporter documentation`
+    When I run `bin/kaocha --plugin partition --seed 0 --partition-index 1 --partitions 2 --partition-strategy :var --reporter documentation`
     Then the output should contain:
       """
       --- unit (clojure.test) ---------------------------
@@ -57,7 +57,7 @@ Feature: Partitioning tests by var for load balancing
       """
 
   Scenario: Running tests on the first machine of three, skipping test0.
-    When I run `bin/kaocha --seed 0 --skip my.project.a-test/test0 --partition-index 0 --partitions 3 --partition-strategy :var --reporter documentation`
+    When I run `bin/kaocha --plugin partition --seed 0 --skip my.project.a-test/test0 --partition-index 0 --partitions 3 --partition-strategy :var --reporter documentation`
     Then the output should contain:
       """
       --- unit (clojure.test) ---------------------------
@@ -68,7 +68,7 @@ Feature: Partitioning tests by var for load balancing
       """
 
   Scenario: Running tests on the second machine of three, skipping test0.
-    When I run `bin/kaocha --seed 0 --skip my.project.a-test/test0 --partition-index 1 --partitions 3 --partition-strategy :var --reporter documentation`
+    When I run `bin/kaocha --plugin partition --seed 0 --skip my.project.a-test/test0 --partition-index 1 --partitions 3 --partition-strategy :var --reporter documentation`
     Then the output should contain:
       """
       --- unit (clojure.test) ---------------------------
@@ -79,7 +79,7 @@ Feature: Partitioning tests by var for load balancing
       """
 
   Scenario: Running tests on the third machine of three, skipping test0.
-    When I run `bin/kaocha --seed 0 --skip my.project.a-test/test0 --partition-index 2 --partitions 3 --partition-strategy :var --reporter documentation`
+    When I run `bin/kaocha --plugin partition --seed 0 --skip my.project.a-test/test0 --partition-index 2 --partitions 3 --partition-strategy :var --reporter documentation`
     Then the output should contain:
       """
       --- unit (clojure.test) ---------------------------
