@@ -161,9 +161,10 @@
 ;;TODO must run after kaocha.plugin/filter
 (defplugin kaocha.plugin/partition
   (main [{{:keys [print-suggested-partitions combine-partitioned-results]} :kaocha/cli-options}]
+        (prn "main" print-suggested-partitions)
     (cond
-      print-suggested-partitions (suggested-partitions/run print-suggested-partitions)
-      combine-partitioned-results (combine-results/run combine-partitioned-results)))
+      print-suggested-partitions (System/exit (suggested-partitions/run print-suggested-partitions))
+      combine-partitioned-results (System/exit (combine-results/run combine-partitioned-results))))
   (cli-options [opts]
     (let [parse #(keyword (if (= \: (first %)) (subs % 1) %))
           parse-int #(Integer/parseInt %)
