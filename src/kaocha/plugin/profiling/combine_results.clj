@@ -20,7 +20,7 @@
     base))
 
 (defn run [m]
-  (let [{:keys [result-files output-file]} (edn/read-string m)]
+  (let [{:keys [result-files output-file]} m]
     (spit output-file (binding [*print-length* nil
                                 *print-level* nil
                                 *print-namespace-maps* false]
