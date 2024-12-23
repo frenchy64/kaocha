@@ -2,6 +2,7 @@
   (:require [kaocha.plugin :as plugin :refer [defplugin]]
             [kaocha.testable :as testable]
             [kaocha.result :as result]
+            [kaocha.plugin.randomize :as randomize]
             [clojure.string :as str]))
 
 
@@ -14,7 +15,7 @@
     (when (result/failed? results)
       (println)
       (doseq [test (testable/test-seq results)]
-        (if (and (not (seq (::result/tests test))) (result/failed? test))
+        (if (and (empty? (::result/tests test)) (result/failed? test))
           (let [id (str (::testable/id test))]
             (println
              (str/join
@@ -34,9 +35,17 @@
 
                                :else
                                [(str "--" (name k))  v]))
-                           (cond-> (dissoc (:kaocha/cli-options results) :focus)
+                           (cond-> (dissoc (:kaocha/cli-options results) :focus :read-profiling-file :write-profiling-file
+                                           :partitions :partition-index :partition-strategy :target-partition-minutes :max-partitions
+                                           :junit-xml-file :junit-xml-add-location-metadata)
                              (= "tests.edn" (:config-file (:kaocha/cli-options results)))
-                             (dissoc :config-file))))
+                             (dissoc :config-file)
+
+                             (= [:kaocha.plugin/junit-xml] (:plugin (:kaocha/cli-options results)))
+                             (update :kaocha/cli-option dissoc :plugin)
+
+                             (::randomize/randomize? results)
+                             (assoc :seed (::randomize/seed results)))))
                   (conj "--focus"
                         (str
                          "'" (cond-> id (= (first id) \:) (subs 1)) "'")))))))))

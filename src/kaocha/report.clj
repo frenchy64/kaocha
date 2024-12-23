@@ -438,7 +438,7 @@
   [dots* result])
 
 (def documentation
-  "Reporter that prints an overview of all tests bein run using indentation."
+  "Reporter that prints an overview of all tests being run using indentation."
   [doc result])
 
 (defn tap

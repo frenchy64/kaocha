@@ -61,6 +61,10 @@ There is also a [#kaocha](https://clojurians.slack.com/messages/CCY2V0U6A/convo/
 - [Configuration: Warnings](https://cljdoc.org/d/lambdaisland/kaocha/CURRENT/doc/configuration-warnings)
 - [Focusing based on metadata](https://cljdoc.org/d/lambdaisland/kaocha/CURRENT/doc/focusing-based-on-metadata)
 - [Focusing on specific tests](https://cljdoc.org/d/lambdaisland/kaocha/CURRENT/doc/focusing-on-specific-tests)
+- [Partitioning tests automatically for load balancing](https://cljdoc.org/d/lambdaisland/kaocha/CURRENT/doc/partitioning-tests-automatically-for-load-balancing)
+- [Partitioning tests by suite for load balancing](https://cljdoc.org/d/lambdaisland/kaocha/CURRENT/doc/partitioning-tests-by-suite-for-load-balancing)
+- [Partitioning tests by var for load balancing](https://cljdoc.org/d/lambdaisland/kaocha/CURRENT/doc/partitioning-tests-by-var-for-load-balancing)
+- [Profiling tests](https://cljdoc.org/d/lambdaisland/kaocha/CURRENT/doc/profiling-tests)
 - [Skipping based on metadata](https://cljdoc.org/d/lambdaisland/kaocha/CURRENT/doc/skipping-based-on-metadata)
 - [Skipping test based on ids](https://cljdoc.org/d/lambdaisland/kaocha/CURRENT/doc/skipping-test-based-on-ids)
 - [Marking tests as pending](https://cljdoc.org/d/lambdaisland/kaocha/CURRENT/doc/marking-tests-as-pending)
@@ -236,7 +240,7 @@ Then you can create a binstub named `bin/kaocha-bb`:
 ```shell
 
 #!/usr/bin/env bash
-bb -m kaocha.runner/-main  $@
+bb -m kaocha.runner/-main "$@"
 
 ```
 

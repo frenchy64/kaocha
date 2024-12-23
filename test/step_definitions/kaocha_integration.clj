@@ -42,7 +42,7 @@
       (merge m result))))
 
 (Then "the exit-code is non-zero" [{:keys [exit] :as m}]
-  (is (not= "0" exit))
+  (is (not= 0 (Integer. exit)))
   m)
 
 (Then "the exit-code should be {int}" [{:keys [exit] :as m} code]
@@ -66,11 +66,10 @@
   m)
 
 (Then "the EDN output should contain:" [m output]
-      (let  [actual (edn/read-string (:out m))
-             expected (edn/read-string output)]
+      (let [actual (edn/read-string (:out m))
+            expected (edn/read-string output)]
         (is (= (select-keys actual (keys expected)) expected)))
       m)
-
 
 (Then "stderr should contain" [m output]
   (is (substring? output (:err m)))

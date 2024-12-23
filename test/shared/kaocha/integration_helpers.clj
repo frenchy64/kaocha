@@ -2,6 +2,7 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.test :refer [is]]
+            [clojure.pprint :as pp]
             [kaocha.platform :as platform])
   (:import (java.io File)
            (java.nio.file Files
@@ -70,10 +71,10 @@
   (with-open [deps-out (io/writer path)]
     (binding [*out* deps-out]
       (with-print-namespace-maps false
-        (clojure.pprint/pprint {:deps {'lambdaisland/kaocha           {:local/root (project-dir-path)}
-                                       'lambdaisland/kaocha-cloverage {:mvn/version "RELEASE"}
-                                       'org.clojure/test.check        {:mvn/version "0.10.0-alpha3"}
-                                       'orchestra/orchestra           {:mvn/version "2020.07.12-1"}}})))))
+        (pp/pprint {:deps {'lambdaisland/kaocha           {:local/root (project-dir-path)}
+                           'lambdaisland/kaocha-cloverage {:mvn/version "RELEASE"}
+                           'org.clojure/test.check        {:mvn/version "1.1.1"}
+                           'orchestra/orchestra           {:mvn/version "2021.01.01-1"}}})))))
 
 (defn test-dir-setup [m]
   (if (:dir m)
@@ -93,7 +94,7 @@
       (spit (str runner)
             (str/join " "
                       (cond-> ["clojure"
-                               "-m" "kaocha.runner"]
+                               "-M" "-m" "kaocha.runner"]
                         (codecov?)
                         (into ["--plugin" "cloverage"
                                "--cov-output" (project-dir-path "target/coverage" (str (gensym "integration")))

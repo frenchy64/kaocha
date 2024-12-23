@@ -57,9 +57,11 @@ Feature: Plugin: Notifier (desktop notifications)
     (deftest simple-fail-test
       (is (= :same :not-same)))
     """
-    When I run `bin/kaocha`
+    When I run `sh -c 'CI=false bin/kaocha'`
+    Then the exit-code should be 1
     And I run `cat /tmp/kaocha.txt`
-    Then the output should contain:
+    Then the exit-code should be 0
+    And the output should contain:
     """
     ⛔️ Failing
     1 tests, 1 failures.

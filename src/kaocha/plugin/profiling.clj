@@ -1,11 +1,14 @@
 (ns kaocha.plugin.profiling
-  (:require [clojure.java.io :as io]
+  (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
             [clojure.spec.alpha :as spec]
             [clojure.string :as str]
             [kaocha.plugin :as plugin :refer [defplugin]]
             [kaocha.testable :as testable])
   (:import java.time.Instant
            java.time.temporal.ChronoUnit))
+
+(set! *warn-on-reflection* true)
 
 (spec/def ::start #(instance? Instant %))
 (spec/def ::duration nat-int?)
@@ -15,12 +18,17 @@
 (defn start [testable]
   (assoc testable ::start (Instant/now)))
 
-(defn stop [testable]
+(defn ^Instant stop [testable]
   (cond-> testable
     (::start testable)
-    (assoc ::duration (.until (::start testable)
+    (assoc ::duration (.until ^Instant (::start testable)
                               (Instant/now)
                               ChronoUnit/NANOS))))
+
+(defn read-profiling-file [{:kaocha/keys [cli-options] :as config}]
+  (when-some [f (:read-profiling-file cli-options)]
+    (when (-> f io/file .exists)
+      (edn/read-string (slurp f)))))
 
 (defplugin kaocha.plugin/profiling
   (pre-run [test-plan]
@@ -39,22 +47,43 @@
     (conj opts
           [nil "--[no-]profiling"      "Show slowest tests of each type with timing information."]
           [nil "--profiling-count NUM" "Show this many slow tests of each kind in profile results."
-           :parse-fn #(Integer/parseInt %)]))
+           :parse-fn #(Integer/parseInt %)]
+          [nil "--read-profiling-file FILENAME" "Read prior profiling results, an edn file with any number of maps produced by --write-profiling-file for the same test suite run."]
+          [nil "--write-profiling-file FILENAME" "Write profiling results to a file."]))
 
   (config [{:kaocha/keys [cli-options] :as config}]
     (assoc config
            ::profiling? (:profiling cli-options (::profiling? config true))
-           ::count      (:profiling-count cli-options (::count config 3))))
+           ::count      (:profiling-count cli-options (::count config 3))
+           ::write-profiling-file (:write-profiling-file cli-options)
+           ::prior-profiling (read-profiling-file config)))
 
   (post-summary [result]
     (when (::profiling? result)
       (let [tests     (->> result
                            testable/test-seq
-                           (remove ::testable/load-error)
-                           (remove ::testable/skip))
+                           (remove ::testable/load-error))
             types     (group-by :kaocha.testable/type tests)
             total-dur (::duration result)
             limit     (::count result)]
+        (when-some [f (::write-profiling-file result)]
+          (let [profiling-results
+                (group-by :kaocha.testable/type
+                          (into [] (keep #(when (::duration %)
+                                            (select-keys % [::duration :kaocha.testable/type :kaocha.var/name
+                                                            :kaocha.testable/id])))
+                                tests))
+                profiling-results
+                {::version 1
+                 :kaocha/cli-options (:kaocha/cli-options result)
+                 :results (into {} (map (fn [[k v]]
+                                          [k (-> (group-by :kaocha.testable/id v)
+                                                 (update-vals #(assoc (first %) ::duration (apply +' (map ::duration %)))))]))
+                                profiling-results)}]
+            (spit f (binding [*print-length* nil
+                              *print-level* nil
+                              *print-namespace-maps* false]
+                      (pr-str profiling-results)))))
         (->> (for [[type tests] types
                    :when        type
                    :let         [slowest (take limit (reverse (sort-by ::duration tests)))
