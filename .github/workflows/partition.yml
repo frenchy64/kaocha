@@ -127,6 +127,7 @@ jobs:
       - name: Run tests
         run: |
           ./bin/kaocha \
+            --plugin partition \
             --read-profiling-file kaocha-profiling.edn \
             --write-profiling-file current-kaocha-profiling-${{ strategy.job-index }}.edn \
             --partition-index ${{ strategy.job-index }} \
